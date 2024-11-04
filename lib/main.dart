@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:sp_util/sp_util.dart';
@@ -83,13 +84,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   late String _username;
   late String _password;
+  late String _background;
   final _usernameEdit = TextEditingController();
   final _passwordEdit = TextEditingController();
+  final _backgroundEdit = TextEditingController();
 
   @override
   dispose() {
     _usernameEdit.dispose();
     _passwordEdit.dispose();
+    _backgroundEdit.dispose();
     super.dispose();
   }
 
@@ -97,6 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await SpUtil.getInstance();
     _username = SpUtil.getString('byau_username', defValue: '')!;
     _password = SpUtil.getString('byau_password', defValue: '')!;
+    _background = SpUtil.getString('background', defValue: '')!;
     SpUtil.getBool('auto_login', defValue: false)!;
     if (SpUtil.getBool('first_run', defValue: false)! == false) {
       await showAutoLoginDialog();
@@ -178,24 +183,26 @@ class _MyHomePageState extends State<MyHomePage> {
         case '课程表':
           setState(() {
             selectedIndex = 0;
+            webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(addressList[0])));
           });
-          webViewController?.loadUrl(
-              urlRequest: URLRequest(url: WebUri(addressList[0])));
 
           return;
         case '虚拟校园卡':
           setState(() {
             selectedIndex = 1;
+            webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(addressList[1])));
           });
-          webViewController?.loadUrl(
-              urlRequest: URLRequest(url: WebUri(addressList[1])));
+
           return;
         case '校园网':
           setState(() {
             selectedIndex = 2;
+            webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(addressList[2])));
           });
-          webViewController?.loadUrl(
-              urlRequest: URLRequest(url: WebUri(addressList[2])));
+
           return;
       }
     });
@@ -213,6 +220,14 @@ class _MyHomePageState extends State<MyHomePage> {
       return _username;
     } else {
       return '未设置用户名';
+    }
+  }
+
+  String getBackground() {
+    if (_background != '') {
+      return _background;
+    } else {
+      return '未设置';
     }
   }
 
@@ -250,25 +265,31 @@ class _MyHomePageState extends State<MyHomePage> {
                 });
               },
               onLoadStop: (controller, url) async {
+                // 自动登录
                 if (url!.path.contains('/cas/login') &&
                     SpUtil.getBool('auto_login')! == true) {
-                  print(SpUtil.getBool('auto_login')!);
                   await webViewController?.evaluateJavascript(
                       source:
                           'javascript:fm1.username.value="$_username";fm1.password.value="$_password";fm1.passbutton.click()');
                 }
-                await webViewController?.evaluateJavascript(
-                    source:
-                        """javascript:document.body.style.background = 'url(https://patchwiki.biligame.com/images/sr/8/8c/3ajfjkxhuz847czkovkwrtue726z1gt.png) no-repeat center fixed';
+                // 设置自定义背景
+                if (SpUtil.getString('background')! != "") {
+                  if (url.path.contains('srun_portal') |
+                      url.path.contains('lightapp')) {
+                    await webViewController?.evaluateJavascript(
+                        source:
+                            """javascript:document.body.style.background = 'url(${SpUtil.getString('background')}) no-repeat center fixed';
                             teste(document.getElementsByTagName("div"));
 
                         function teste(array){
         for(var i=0; i<array.length; i++)
         {
-            array[i].style.backgroundColor="rgba(255, 255, 255,0)";
+            array[i].style.backgroundColor="rgba(255, 255, 255,0.1)";
             teste(array[i].getElementsByTagName("div"));
         }
     }""");
+                  }
+                }
 
                 setState(() {
                   this.url = url.toString();
@@ -321,43 +342,108 @@ class _MyHomePageState extends State<MyHomePage> {
                 isDismissible: true,
                 enableDrag: true,
                 builder: (context) {
-                  return Column(
+                  return ListView(
+                    shrinkWrap: true,
                     children: [
                       AppBar(
                         backgroundColor: Colors.transparent,
                         title: const Text("设置"),
                       ),
-                      ListView(
-                        shrinkWrap: true,
-                        children: [
-                          SwitchListTile(
-                            secondary: const Icon(Icons.login),
-                            title: const Text("自动登录"),
-                            subtitle: Text(
-                              getUsername(),
-                              maxLines: 1,
-                            ),
-                            onChanged: (bool value) {
-                              showAutoLoginDialog();
-                            },
-                            value: SpUtil.getBool('auto_login')!,
-                          ),
-                          ListTile(
-                              leading: const Icon(Icons.delete),
-                              title: const Text("清除所有数据"),
-                              subtitle: const Text("若遇到无法登录等异常可尝试此项"),
-                              onTap: () {
-                                cookieManager.deleteAllCookies;
-                                webViewController?.reload();
-                                Navigator.pop(context);
-                              }),
-                          ListTile(
-                              leading: const Icon(Icons.info),
-                              title: const Text("关于"),
-                              subtitle: const Text("整合常用功能的八一农大第三方app"),
-                              onTap: () {}),
-                        ],
-                      )
+                      SwitchListTile(
+                        secondary: const Icon(Icons.login),
+                        title: const Text("自动登录"),
+                        subtitle: Text(
+                          getUsername(),
+                          maxLines: 1,
+                        ),
+                        onChanged: (bool value) {
+                          showAutoLoginDialog();
+                        },
+                        value: SpUtil.getBool('auto_login')!,
+                      ),
+                      ListTile(
+                          leading: const Icon(Icons.delete),
+                          title: const Text("清除数据"),
+                          subtitle: const Text("若遇到无法登录等异常可尝试此项"),
+                          onTap: () {
+                            cookieManager.deleteAllCookies;
+                            webViewController?.loadUrl(
+                                urlRequest: URLRequest(
+                                    url: WebUri(addressList[selectedIndex])));
+                            Navigator.pop(context);
+                          }),
+                      ListTile(
+                          leading: const Icon(Icons.image),
+                          title: const Text("自定义背景"),
+                          subtitle: Text(getBackground()),
+                          onTap: () {
+                            showDialog(
+                                barrierDismissible: true,
+                                builder: (context) {
+                                  _backgroundEdit.text = _background;
+                                  return AlertDialog(
+                                      title: const Text("自定义背景"),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text(
+                                              "仅对课程表、虚拟校园卡、校园网管理生效。刷新以应用更改。"),
+                                          TextField(
+                                            autofocus: false,
+                                            controller: _backgroundEdit,
+                                            onSubmitted: (value) {
+                                              _backgroundEdit.text = value;
+                                            },
+                                            decoration: const InputDecoration(
+                                                labelText:
+                                                    "图片地址（需为 http/https）"),
+                                          ),
+                                        ],
+                                      ),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          child: const Text("取消"),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                        TextButton(
+                                          child: const Text("确定"),
+                                          onPressed: () async {
+                                            await SpUtil.putString('background',
+                                                _backgroundEdit.text);
+                                            setState(() {
+                                              _background = SpUtil.getString(
+                                                  'background')!;
+                                            });
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      ]);
+                                },
+                                context: context);
+                          }),
+                      const Divider(),
+                      ListTile(
+                          leading: const Icon(Icons.info),
+                          title: const Text("关于"),
+                          subtitle: const Text("整合常用功能的八一农大第三方app"),
+                          onTap: () {}),
+                      ListTile(
+                          leading: const Icon(Icons.code),
+                          title: const Text("项目地址"),
+                          subtitle: const Text(
+                              "https://github.com/Longhorn3683/byau_lite"),
+                          onTap: () {
+                            Clipboard.setData(const ClipboardData(
+                                text:
+                                    "https://github.com/Longhorn3683/byau_lite"));
+
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(const SnackBar(
+                              content: Text('Yay! A SnackBar!'),
+                            ));
+                          }),
                     ],
                   );
                 });
