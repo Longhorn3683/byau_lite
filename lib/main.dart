@@ -276,18 +276,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 if (SpUtil.getString('background')! != "") {
                   if (url.path.contains('srun_portal') |
                       url.path.contains('lightapp')) {
-                    await webViewController?.evaluateJavascript(
-                        source:
-                            """javascript:document.body.style.background = 'url(${SpUtil.getString('background')}) no-repeat center fixed';
+                    await webViewController?.evaluateJavascript(source: """
+                            javascript:
+                            document.body.style.background = 'url(${SpUtil.getString('background')}) center no-repeat';
+                            document.body.style.backgroundSize = 'cover';
                             teste(document.getElementsByTagName("div"));
-
-                        function teste(array){
-        for(var i=0; i<array.length; i++)
-        {
-            array[i].style.backgroundColor="rgba(255, 255, 255,0.1)";
-            teste(array[i].getElementsByTagName("div"));
-        }
-    }""");
+                            function teste(array){
+                              for(var i=0; i<array.length; i++) {
+                                array[i].style.backgroundColor="rgba(255, 255, 255, 0.1)";
+                                teste(array[i].getElementsByTagName("div"));
+                                teste(array[i].getElementsByTagName("ul"));
+                              }
+                            }
+                            """);
                   }
                 }
 
@@ -431,18 +432,13 @@ class _MyHomePageState extends State<MyHomePage> {
                           onTap: () {}),
                       ListTile(
                           leading: const Icon(Icons.code),
-                          title: const Text("项目地址"),
+                          title: const Text("项目地址（长按复制）"),
                           subtitle: const Text(
                               "https://github.com/Longhorn3683/byau_lite"),
                           onTap: () {
                             Clipboard.setData(const ClipboardData(
                                 text:
                                     "https://github.com/Longhorn3683/byau_lite"));
-
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(const SnackBar(
-                              content: Text('Yay! A SnackBar!'),
-                            ));
                           }),
                     ],
                   );
