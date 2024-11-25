@@ -284,10 +284,10 @@ packages:
     dependency: transitive
     description:
       name: quick_actions_platform_interface
-      sha256: "81a1e40c519bb3cacfec38b3008b13cef665a75bd270da94f40091b57f0f9236"
+      sha256: "1fec7068db5122cd019e9340d3d7be5d36eab099695ef3402c7059ee058329a4"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.6"
+    version: "1.1.0"
   shared_preferences:
     dependency: transitive
     description:
