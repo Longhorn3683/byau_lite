@@ -1,0 +1,10 @@
+{
+  "app": {
+    "bundleName": "io.longhorn3683.byau.hmos",
+    "vendor": "Longhorn3683",
+    "versionCode": 1,
+    "versionName": "1.1.1",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

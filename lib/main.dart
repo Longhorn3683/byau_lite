@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:quick_actions/quick_actions.dart';
-import 'package:sp_util/sp_util.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-WebViewEnvironment? webViewEnvironment;
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,9 +85,9 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  late String _username;
-  late String _password;
-  late String _background;
+  String? _username = '';
+  String? _password = '';
+  String? _background = '';
   final _usernameEdit = TextEditingController();
   final _passwordEdit = TextEditingController();
   final _backgroundEdit = TextEditingController();
@@ -101,19 +101,116 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   initApp() async {
-    await SpUtil.getInstance();
-    _username = SpUtil.getString('byau_username', defValue: '')!;
-    _password = SpUtil.getString('byau_password', defValue: '')!;
-    _background = SpUtil.getString('background', defValue: '')!;
-    SpUtil.getBool('auto_login', defValue: false)!;
-    if (SpUtil.getBool('first_run', defValue: false)! == false) {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('first_run') == null) {
+      await prefs.setString('byau_username', '');
+      await prefs.setString('byau_password', '');
+      await prefs.setString('background', '');
+      await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return PopScope(
+                canPop: false,
+                child: AlertDialog(
+                    title: const Text('欢迎使用极速农大'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('免责声明：本应用由开发者自行开发，与学校无关。若有侵权内容，请及时联系开发者删除。'),
+                        /*ListTile(
+                          leading: const Icon(Icons.file_present),
+                          title: Text('使用协议'),
+                          onTap: () async {
+                            String terms = await rootBundle
+                                .loadString('assets/terms_of_use.md');
+                            showDialog(
+                                context: context,
+                                barrierDismissible: true,
+                                builder: (context) {
+                                  return AlertDialog(
+                                      content: Container(
+                                        width: double.maxFinite,
+                                        child: ListView(
+                                          children: [MarkdownBody(data: terms)],
+                                        ),
+                                      ),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          child: Text(S.current.ok),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      ]);
+                                });
+                          },
+                        ),*/
+                        ListTile(
+                          leading: const Icon(Icons.privacy_tip),
+                          title: const Text('隐私政策'),
+                          onTap: () async {
+                            String privacy = await rootBundle
+                                .loadString('assets/privacy_policy.md');
+                            showDialog(
+                                context: context,
+                                barrierDismissible: true,
+                                builder: (context) {
+                                  return AlertDialog(
+                                      content: SizedBox(
+                                        width: double.maxFinite,
+                                        child: ListView(
+                                          shrinkWrap: true,
+                                          children: [
+                                            MarkdownBody(data: privacy)
+                                          ],
+                                        ),
+                                      ),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          child: const Text('确定'),
+                                          onPressed: () async {
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      ]);
+                                });
+                          },
+                        ),
+                      ],
+                    ),
+                    actions: <Widget>[
+                      TextButton(
+                        child: const Text('退出'),
+                        onPressed: () {
+                          SystemNavigator.pop();
+                        },
+                      ),
+                      TextButton(
+                        child: const Text('同意'),
+                        onPressed: () async {
+                          final SharedPreferences prefs =
+                              await SharedPreferences.getInstance();
+                          prefs.setBool("first_run", true);
+
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ]));
+          });
       await showAutoLoginDialog();
+    } else {
+      _username = prefs.getString('byau_username');
+      _password = prefs.getString('byau_password');
+      _background = prefs.getString('background');
     }
   }
 
-  showAutoLoginDialog() {
-    _usernameEdit.text = _username;
-    _passwordEdit.text = _password;
+  showAutoLoginDialog() async {
+    //final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    _usernameEdit.text = _username!;
+    _passwordEdit.text = _password!;
 
     showDialog(
         barrierDismissible: false,
@@ -154,29 +251,29 @@ class _MyHomePageState extends State<MyHomePage> {
                   actions: <Widget>[
                     TextButton(
                       child: const Text("取消"),
-                      onPressed: () {
-                        SpUtil.putBool("first_run", true);
+                      onPressed: () async {
                         Navigator.pop(context);
                       },
                     ),
                     TextButton(
                       child: const Text("确定"),
                       onPressed: () async {
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
                         if (_usernameEdit.text.isNotEmpty &&
                             _passwordEdit.text.isNotEmpty) {
                           setState(() {
-                            SpUtil.putBool("auto_login", true);
+                            prefs.setBool("auto_login", true);
                           });
                         } else {
-                          await SpUtil.putBool("auto_login", false);
+                          await prefs.setBool("auto_login", false);
                         }
-                        await SpUtil.putString(
+                        await prefs.setString(
                             "byau_username", _usernameEdit.text);
                         _username = _usernameEdit.text;
-                        await SpUtil.putString(
+                        await prefs.setString(
                             "byau_password", _passwordEdit.text);
                         _password = _passwordEdit.text;
-                        SpUtil.putBool("first_run", true);
                         webViewController?.loadUrl(
                             urlRequest: URLRequest(url: WebUri(url)));
                         Navigator.pop(context);
@@ -228,6 +325,7 @@ class _MyHomePageState extends State<MyHomePage> {
     ]);
   }
 
+/*
   String getUsername() {
     if (_username != '') {
       return _username;
@@ -243,7 +341,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return '未设置';
     }
   }
-
+*/
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -253,7 +351,7 @@ class _MyHomePageState extends State<MyHomePage> {
           IconButton(
             icon: const Icon(Icons.open_in_browser),
             tooltip: "在浏览器打开",
-            onPressed: () => launchUrl(Uri.parse(addressList[selectedIndex])),
+            onPressed: () => launchInBrowser(addressList[selectedIndex]),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -278,20 +376,23 @@ class _MyHomePageState extends State<MyHomePage> {
               });
             },
             onLoadStop: (controller, url) async {
+              final SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
+
               // 自动登录
               if (url!.path.contains('/cas/login') &&
-                  SpUtil.getBool('auto_login')! == true) {
+                  prefs.getBool('auto_login') == true) {
                 await webViewController?.evaluateJavascript(
                     source:
                         'javascript:fm1.username.value="$_username";fm1.password.value="$_password";fm1.passbutton.click()');
               }
               // 设置自定义背景
-              if (SpUtil.getString('background')! != "") {
+              if (prefs.getString('background') != "") {
                 if (url.path.contains('srun_portal') |
                     url.path.contains('lightapp')) {
                   await webViewController?.evaluateJavascript(source: """
                             javascript:
-                            document.body.style.background = 'url(${SpUtil.getString('background')}) center no-repeat';
+                            document.body.style.background = 'url(${prefs.getString('background')}) center no-repeat';
                             document.body.style.backgroundSize = 'cover';
                             teste(document.getElementsByTagName("div"));
                             function teste(array){
@@ -375,7 +476,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void handleDestinationSelected(int index) {
     switch (index) {
       case 5 || 6 || 7:
-        launchUrl(Uri.parse(addressList[index]));
+        launchInBrowser(addressList[index]);
         return;
       default:
         setState(() {
@@ -387,7 +488,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void openSettings() {
+  void openSettings() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool? autoLogin = await prefs.getBool('auto_login');
     showModalBottomSheet(
         context: context,
         builder: (context) {
@@ -398,27 +501,26 @@ class _MyHomePageState extends State<MyHomePage> {
                 backgroundColor: Colors.transparent,
                 title: const Text("设置"),
               ),
-              SwitchListTile(
-                secondary: const Icon(Icons.login),
-                title: const Text("自动登录"),
+              ListTile(
+                leading: const Icon(Icons.account_circle),
+                title: const Text("用户"),
                 subtitle: Text(
-                  getUsername(),
+                  _username!,
                   maxLines: 1,
                 ),
-                onChanged: (bool value) {
+                onTap: () {
                   showAutoLoginDialog();
                 },
-                value: SpUtil.getBool('auto_login')!,
               ),
               ListTile(
                   leading: const Icon(Icons.image),
                   title: const Text("自定义背景"),
-                  subtitle: Text(getBackground()),
+                  subtitle: Text(_background!),
                   onTap: () {
                     showDialog(
                         barrierDismissible: true,
                         builder: (context) {
-                          _backgroundEdit.text = _background;
+                          _backgroundEdit.text = _background!;
                           return AlertDialog(
                               title: const Text("自定义背景"),
                               content: Column(
@@ -446,11 +548,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                 TextButton(
                                   child: const Text("确定"),
                                   onPressed: () async {
-                                    await SpUtil.putString(
+                                    await prefs.setString(
                                         'background', _backgroundEdit.text);
                                     setState(() {
                                       _background =
-                                          SpUtil.getString('background')!;
+                                          prefs.getString('background')!;
                                       webViewController?.loadUrl(
                                           urlRequest:
                                               URLRequest(url: WebUri(url)));
@@ -465,21 +567,74 @@ class _MyHomePageState extends State<MyHomePage> {
                   }),
               const Divider(),
               ListTile(
+                leading: const Icon(Icons.privacy_tip),
+                title: const Text('隐私政策'),
+                onTap: () async {
+                  String privacy =
+                      await rootBundle.loadString('assets/privacy_policy.md');
+                  showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (context) {
+                        return AlertDialog(
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              child: ListView(
+                                shrinkWrap: true,
+                                children: [MarkdownBody(data: privacy)],
+                              ),
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('确定'),
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ]);
+                      });
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text('Longhorn3683的小屋'),
+                subtitle: const Text("longhorn3683.github.io"),
+                onTap: () async {
+                  launchInBrowser('https://longhorn3683.github.io');
+                },
+              ),
+              ListTile(
+                  leading: const Icon(Icons.code),
+                  title: const Text("项目地址"),
+                  subtitle:
+                      const Text("https://github.com/Longhorn3683/byau_lite"),
+                  onTap: () {
+                    launchInBrowser(
+                        "https://github.com/Longhorn3683/byau_lite");
+                  }),
+              ListTile(
                   leading: const Icon(Icons.info),
                   title: const Text("关于"),
                   subtitle: const Text("整合常用功能的八一农大第三方app"),
                   onTap: () {}),
-              ListTile(
-                  leading: const Icon(Icons.code),
-                  title: const Text("项目地址（长按复制）"),
-                  subtitle:
-                      const Text("https://github.com/Longhorn3683/byau_lite"),
-                  onTap: () {
-                    Clipboard.setData(const ClipboardData(
-                        text: "https://github.com/Longhorn3683/byau_lite"));
-                  }),
             ],
           );
         });
+  }
+}
+
+final UrlLauncherPlatform _launcher = UrlLauncherPlatform.instance;
+
+Future<void> launchInBrowser(String url) async {
+  if (!await _launcher.launch(
+    url,
+    useSafariVC: false,
+    useWebView: false,
+    enableJavaScript: false,
+    enableDomStorage: false,
+    universalLinksOnly: false,
+    headers: <String, String>{},
+  )) {
+    throw Exception('Could not launch $url');
   }
 }
