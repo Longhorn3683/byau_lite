@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,7 +7,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 Future main() async {
@@ -55,22 +56,28 @@ class _MyHomePageState extends State<MyHomePage> {
   double progress = 0;
   CookieManager cookieManager = CookieManager.instance();
   List<String> titleList = [
+    '日程',
     "课程表",
     '虚拟校园卡',
+    '成绩查询',
     '校园网管理',
     '教务系统',
     '图书馆系统',
     '校园全景',
     '学生社区',
+    '官方app',
   ];
   List<String> addressList = [
+    'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2F_lightapp%2FstudentSchedul%2Fcard3.html',
     "https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html",
     'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Fqrcode.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2Flightapp%2Ferweima%2Fmobile%2Findex.html',
+    'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2FinquireScore%2Fmobile%2Findex.html',
     'http://10.1.2.1/srun_portal_pc?ac_id=2',
     'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
     'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Filibopac.byau.edu.cn%2Freader%2Fhwthau.php',
     'https://www.720yun.com/vr/c50jzzeuea8',
     'https://www.720yun.com/vr/075j5p4nOm1',
+    'https://apps2.byau.edu.cn/',
   ];
   int selectedIndex = 0;
 
@@ -81,7 +88,9 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     WidgetsBinding widgetsBinding = WidgetsBinding.instance;
     widgetsBinding.addPostFrameCallback((callback) {
-      initializeQuickActions();
+      if (Platform.isAndroid) {
+        initializeQuickActions();
+      }
     });
   }
 
@@ -289,7 +298,7 @@ class _MyHomePageState extends State<MyHomePage> {
       switch (shortcutType) {
         case '课程表':
           setState(() {
-            selectedIndex = 0;
+            selectedIndex = 1;
             webViewController?.loadUrl(
                 urlRequest:
                     URLRequest(url: WebUri(addressList[selectedIndex])));
@@ -298,7 +307,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
         case '虚拟校园卡':
           setState(() {
-            selectedIndex = 1;
+            selectedIndex = 2;
+            webViewController?.loadUrl(
+                urlRequest:
+                    URLRequest(url: WebUri(addressList[selectedIndex])));
+          });
+          return;
+
+        case '成绩查询':
+          setState(() {
+            selectedIndex = 3;
             webViewController?.loadUrl(
                 urlRequest:
                     URLRequest(url: WebUri(addressList[selectedIndex])));
@@ -307,7 +325,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         case '校园网':
           setState(() {
-            selectedIndex = 2;
+            selectedIndex = 4;
             webViewController?.loadUrl(
                 urlRequest:
                     URLRequest(url: WebUri(addressList[selectedIndex])));
@@ -321,6 +339,8 @@ class _MyHomePageState extends State<MyHomePage> {
           type: '课程表', localizedTitle: '课程表', icon: 'qa_calendar'),
       const ShortcutItem(
           type: '虚拟校园卡', localizedTitle: '虚拟校园卡', icon: 'qa_code'),
+      const ShortcutItem(
+          type: '成绩查询', localizedTitle: '成绩查询', icon: 'qa_score'),
       const ShortcutItem(type: '校园网', localizedTitle: '校园网', icon: 'qa_wifi')
     ]);
   }
@@ -427,33 +447,41 @@ class _MyHomePageState extends State<MyHomePage> {
           ListTile(
             title:
                 Text("极速农大", style: Theme.of(context).textTheme.headlineMedium),
-            subtitle: const Text('版本 1.1.0'),
+            subtitle: const Text('版本 1.2.0 beta'),
             trailing: IconButton(
                 onPressed: () => openSettings(),
                 icon: const Icon(Icons.settings)),
           ),
           NavigationDrawerDestination(
             label: Text(titleList[0]),
-            icon: const Icon(Icons.calendar_month),
+            icon: const Icon(Icons.view_agenda),
           ),
           NavigationDrawerDestination(
             label: Text(titleList[1]),
+            icon: const Icon(Icons.calendar_month),
+          ),
+          NavigationDrawerDestination(
+            label: Text(titleList[2]),
             icon: const Icon(Icons.qr_code),
+          ),
+          NavigationDrawerDestination(
+            label: Text(titleList[3]),
+            icon: const Icon(Icons.score),
           ),
           const Divider(),
           const ListTile(
             title: Text('内网资源'),
           ),
           NavigationDrawerDestination(
-            label: Text(titleList[2]),
+            label: Text(titleList[4]),
             icon: const Icon(Icons.wifi),
           ),
           NavigationDrawerDestination(
-            label: Text(titleList[3]),
+            label: Text(titleList[5]),
             icon: const Icon(Icons.class_),
           ),
           NavigationDrawerDestination(
-            label: Text(titleList[4]),
+            label: Text(titleList[6]),
             icon: const Icon(Icons.library_books),
           ),
           const Divider(),
@@ -461,12 +489,16 @@ class _MyHomePageState extends State<MyHomePage> {
             title: Text('看点好看的'),
           ),
           NavigationDrawerDestination(
-            label: Text(titleList[5]),
+            label: Text(titleList[7]),
             icon: const Icon(Icons.vrpano),
           ),
           NavigationDrawerDestination(
-            label: Text(titleList[6]),
+            label: Text(titleList[8]),
             icon: const Icon(Icons.home_work),
+          ),
+          NavigationDrawerDestination(
+            label: Text(titleList[9]),
+            icon: const Icon(Icons.download),
           ),
         ],
       ),
@@ -475,7 +507,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void handleDestinationSelected(int index) {
     switch (index) {
-      case 5 || 6 || 7:
+      case 7 || 8 || 9:
         launchInBrowser(addressList[index]);
         return;
       default:
@@ -503,13 +535,22 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
-                title: const Text("用户"),
+                title: const Text("自动登录"),
                 subtitle: Text(
                   _username!,
                   maxLines: 1,
                 ),
                 onTap: () {
                   showAutoLoginDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.question_mark),
+                title: const Text('忘记密码'),
+                subtitle: const Text('服务大厅密码与校园网不互通'),
+                onTap: () async {
+                  launchInBrowser(
+                      'https://imp.byau.edu.cn/_web/_apps/ids/api/passwordRecovery/new.rst');
                 },
               ),
               ListTile(

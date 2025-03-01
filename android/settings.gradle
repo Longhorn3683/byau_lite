@@ -22,4 +22,14 @@ plugins {
     id "org.jetbrains.kotlin.android" version "1.8.22" apply false
 }
 
-include ":app"
+include ":app", ":flutter_inappwebview_android"
+
+gradle.beforeProject { project ->
+    if (project.name == "flutter_inappwebview_android") {
+        project.afterEvaluate {
+            if (project.hasProperty("android")) {
+                project.android.buildTypes.release.minifyEnabled = false
+            }
+        }
+    }
+}
