@@ -3,6 +3,6 @@
 
     <item android:drawable="@drawable/qa_calendar" />
     <item android:drawable="@drawable/qa_code" />
-    <item android:drawable="@drawable/qa_wifi" />
+    <item android:drawable="@drawable/qa_score" />
 
 </layer-list>

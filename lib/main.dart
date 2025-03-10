@@ -1,10 +1,13 @@
 import 'dart:io';
 
+import 'package:byau/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -26,10 +29,10 @@ class BYAUApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
-      ),
-      darkTheme: ThemeData.dark(),
+      theme: ThemeData(colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1)),
+      darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1)),
       home: const MyHomePage(title: '极速农大'),
     );
   }
@@ -48,38 +51,20 @@ class _MyHomePageState extends State<MyHomePage> {
   final QuickActions quickActions = const QuickActions();
 
   InAppWebViewController? webViewController;
+  InAppWebViewController? webViewController2;
+  InAppWebViewController? webViewController3;
+
   InAppWebViewSettings settings = InAppWebViewSettings(
+      transparentBackground: true,
       mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW);
 
-  String url = "";
+  String courseUrl =
+      'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html';
+  String courseUrl2 =
+      'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2F_lightapp%2FstudentSchedul%2Fcard3.html';
 
   double progress = 0;
   CookieManager cookieManager = CookieManager.instance();
-  List<String> titleList = [
-    '日程',
-    "课程表",
-    '虚拟校园卡',
-    '成绩查询',
-    '校园网管理',
-    '教务系统',
-    '图书馆系统',
-    '校园全景',
-    '学生社区',
-    '官方app',
-  ];
-  List<String> addressList = [
-    'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2F_lightapp%2FstudentSchedul%2Fcard3.html',
-    "https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html",
-    'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Fqrcode.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2Flightapp%2Ferweima%2Fmobile%2Findex.html',
-    'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2FinquireScore%2Fmobile%2Findex.html',
-    'http://10.1.2.1/srun_portal_pc?ac_id=2',
-    'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
-    'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Filibopac.byau.edu.cn%2Freader%2Fhwthau.php',
-    'https://www.720yun.com/vr/c50jzzeuea8',
-    'https://www.720yun.com/vr/075j5p4nOm1',
-    'https://apps2.byau.edu.cn/',
-  ];
-  int selectedIndex = 0;
 
   @override
   void initState() {
@@ -96,16 +81,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String? _username = '';
   String? _password = '';
-  String? _background = '';
   final _usernameEdit = TextEditingController();
   final _passwordEdit = TextEditingController();
-  final _backgroundEdit = TextEditingController();
 
   @override
   dispose() {
     _usernameEdit.dispose();
     _passwordEdit.dispose();
-    _backgroundEdit.dispose();
     super.dispose();
   }
 
@@ -114,110 +96,80 @@ class _MyHomePageState extends State<MyHomePage> {
     if (prefs.getBool('first_run') == null) {
       await prefs.setString('byau_username', '');
       await prefs.setString('byau_password', '');
-      await prefs.setString('background', '');
-      await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) {
-            return PopScope(
-                canPop: false,
-                child: AlertDialog(
-                    title: const Text('欢迎使用极速农大'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('免责声明：本应用由开发者自行开发，与学校无关。若有侵权内容，请及时联系开发者删除。'),
-                        /*ListTile(
-                          leading: const Icon(Icons.file_present),
-                          title: Text('使用协议'),
-                          onTap: () async {
-                            String terms = await rootBundle
-                                .loadString('assets/terms_of_use.md');
-                            showDialog(
-                                context: context,
-                                barrierDismissible: true,
-                                builder: (context) {
-                                  return AlertDialog(
-                                      content: Container(
-                                        width: double.maxFinite,
-                                        child: ListView(
-                                          children: [MarkdownBody(data: terms)],
-                                        ),
-                                      ),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          child: Text(S.current.ok),
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                        ),
-                                      ]);
-                                });
-                          },
-                        ),*/
-                        ListTile(
-                          leading: const Icon(Icons.privacy_tip),
-                          title: const Text('隐私政策'),
-                          onTap: () async {
-                            String privacy = await rootBundle
-                                .loadString('assets/privacy_policy.md');
-                            showDialog(
-                                context: context,
-                                barrierDismissible: true,
-                                builder: (context) {
-                                  return AlertDialog(
-                                      content: SizedBox(
-                                        width: double.maxFinite,
-                                        child: ListView(
-                                          shrinkWrap: true,
-                                          children: [
-                                            MarkdownBody(data: privacy)
-                                          ],
-                                        ),
-                                      ),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          child: const Text('确定'),
-                                          onPressed: () async {
-                                            Navigator.pop(context);
-                                          },
-                                        ),
-                                      ]);
-                                });
-                          },
-                        ),
-                      ],
-                    ),
-                    actions: <Widget>[
-                      TextButton(
-                        child: const Text('退出'),
-                        onPressed: () {
-                          SystemNavigator.pop();
-                        },
-                      ),
-                      TextButton(
-                        child: const Text('同意'),
-                        onPressed: () async {
-                          final SharedPreferences prefs =
-                              await SharedPreferences.getInstance();
-                          prefs.setBool("first_run", true);
-
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ]));
-          });
+      await showFirstRunDialog();
       await showAutoLoginDialog();
     } else {
       _username = prefs.getString('byau_username');
       _password = prefs.getString('byau_password');
-      _background = prefs.getString('background');
     }
   }
 
-  showAutoLoginDialog() async {
-    //final SharedPreferences prefs = await SharedPreferences.getInstance();
+  showFirstRunDialog() async {
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return PopScope(
+              canPop: false,
+              child: AlertDialog(
+                  title: const Text('欢迎使用极速农大'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('免责声明：本应用由开发者自行开发，与学校无关。若有侵权内容，请及时联系开发者删除。'),
+                      ListTile(
+                        leading: const Icon(Icons.privacy_tip),
+                        title: const Text('隐私政策'),
+                        onTap: () async {
+                          String privacy = await rootBundle
+                              .loadString('assets/privacy_policy.md');
+                          showDialog(
+                              context: context,
+                              barrierDismissible: true,
+                              builder: (context) {
+                                return AlertDialog(
+                                    content: SizedBox(
+                                      width: double.maxFinite,
+                                      child: ListView(
+                                        shrinkWrap: true,
+                                        children: [MarkdownBody(data: privacy)],
+                                      ),
+                                    ),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: const Text('确定'),
+                                        onPressed: () async {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ]);
+                              });
+                        },
+                      ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      child: const Text('退出'),
+                      onPressed: () {
+                        SystemNavigator.pop();
+                      },
+                    ),
+                    TextButton(
+                      child: const Text('同意'),
+                      onPressed: () async {
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        prefs.setBool("first_run", true);
 
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ]));
+        });
+  }
+
+  showAutoLoginDialog() async {
     _usernameEdit.text = _username!;
     _passwordEdit.text = _password!;
 
@@ -231,7 +183,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text("填写以下内容以启用自动登录，留空则关闭自动登录。"),
                       TextField(
                         autofocus: true,
                         controller: _usernameEdit,
@@ -240,7 +191,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         },
                         onEditingComplete: () =>
                             FocusScope.of(context).nextFocus(),
-                        decoration: const InputDecoration(labelText: "账号"),
+                        decoration: const InputDecoration(labelText: "学号"),
                       ),
                       TextField(
                         autofocus: true,
@@ -258,6 +209,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     ],
                   ),
                   actions: <Widget>[
+                    TextButton(
+                      child: const Text("忘记密码"),
+                      onPressed: () async {
+                        launchInBrowser(
+                            'https://imp.byau.edu.cn/_web/_apps/ids/api/passwordRecovery/new.rst');
+                      },
+                    ),
                     TextButton(
                       child: const Text("取消"),
                       onPressed: () async {
@@ -284,7 +242,9 @@ class _MyHomePageState extends State<MyHomePage> {
                             "byau_password", _passwordEdit.text);
                         _password = _passwordEdit.text;
                         webViewController?.loadUrl(
-                            urlRequest: URLRequest(url: WebUri(url)));
+                            urlRequest: URLRequest(url: WebUri(courseUrl)));
+                        webViewController2?.loadUrl(
+                            urlRequest: URLRequest(url: WebUri(courseUrl2)));
                         Navigator.pop(context);
                       },
                     ),
@@ -296,104 +256,525 @@ class _MyHomePageState extends State<MyHomePage> {
   initializeQuickActions() async {
     await quickActions.initialize((String shortcutType) {
       switch (shortcutType) {
-        case '课程表':
-          setState(() {
-            selectedIndex = 1;
-            webViewController?.loadUrl(
-                urlRequest:
-                    URLRequest(url: WebUri(addressList[selectedIndex])));
-          });
-          return;
-
         case '虚拟校园卡':
-          setState(() {
-            selectedIndex = 2;
-            webViewController?.loadUrl(
-                urlRequest:
-                    URLRequest(url: WebUri(addressList[selectedIndex])));
-          });
+          showQrCode();
           return;
 
         case '成绩查询':
-          setState(() {
-            selectedIndex = 3;
-            webViewController?.loadUrl(
-                urlRequest:
-                    URLRequest(url: WebUri(addressList[selectedIndex])));
-          });
+          openInquireScore();
           return;
 
-        case '校园网':
-          setState(() {
-            selectedIndex = 4;
-            webViewController?.loadUrl(
-                urlRequest:
-                    URLRequest(url: WebUri(addressList[selectedIndex])));
-          });
+        case '校历':
+          openCalendar();
           return;
       }
     });
 
     quickActions.setShortcutItems(<ShortcutItem>[
       const ShortcutItem(
-          type: '课程表', localizedTitle: '课程表', icon: 'qa_calendar'),
-      const ShortcutItem(
           type: '虚拟校园卡', localizedTitle: '虚拟校园卡', icon: 'qa_code'),
       const ShortcutItem(
           type: '成绩查询', localizedTitle: '成绩查询', icon: 'qa_score'),
-      const ShortcutItem(type: '校园网', localizedTitle: '校园网', icon: 'qa_wifi')
+      const ShortcutItem(type: '校历', localizedTitle: '校历', icon: 'qa_calendar'),
     ]);
   }
 
-/*
-  String getUsername() {
-    if (_username != '') {
-      return _username;
+  getBackground() async {
+    Directory? document = await getApplicationDocumentsDirectory();
+    File bgFile = File('${document.path}/background');
+    if (bgFile.existsSync()) {
+      return bgFile;
     } else {
-      return '未设置用户名';
+      return 114514;
     }
   }
 
-  String getBackground() {
-    if (_background != '') {
-      return _background;
-    } else {
-      return '未设置';
-    }
-  }
-*/
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(titleList[selectedIndex]),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_browser),
-            tooltip: "在浏览器打开",
-            onPressed: () => launchInBrowser(addressList[selectedIndex]),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        FutureBuilder(
+          future: getBackground(),
+          builder: (BuildContext context, AsyncSnapshot snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              if (snapshot.hasError) {
+                // 请求失败，显示错误
+                return Container(
+                    color: ThemeData.light().scaffoldBackgroundColor);
+              } else {
+                // 请求成功，显示数据
+                if (snapshot.data == 114514) {
+                  return Container(
+                      color: ThemeData.light().scaffoldBackgroundColor);
+                } else {
+                  return Image.file(
+                    snapshot.data,
+                    fit: BoxFit.cover,
+                  );
+                }
+              }
+            } else {
+              return Container(
+                  color: ThemeData.light().scaffoldBackgroundColor);
+            }
+          },
+        ),
+        Container(
+          color: Colors.white70,
+        ),
+        Scaffold(
+          extendBodyBehindAppBar: true,
+          backgroundColor: Colors.transparent,
+          appBar: PreferredSize(
+            preferredSize: const Size(double.infinity, kToolbarHeight),
+            child: Theme(
+              data: ThemeData.light(),
+              child: AppBar(
+                systemOverlayStyle: SystemUiOverlayStyle.dark,
+                backgroundColor: Colors.transparent,
+                actions: [
+                  IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: "刷新",
+                      onPressed: () {
+                        webViewController?.loadUrl(
+                            urlRequest: URLRequest(url: WebUri(courseUrl)));
+                        webViewController2?.loadUrl(
+                            urlRequest: URLRequest(url: WebUri(courseUrl2)));
+                      }),
+                  IconButton(
+                      onPressed: () => openSettings(),
+                      icon: const Icon(Icons.settings)),
+                ],
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: "刷新",
-            onPressed: () => webViewController?.loadUrl(
-                urlRequest: URLRequest(url: WebUri(url))),
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              Column(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).padding.top + 4,
+                  ),
+                  Expanded(
+                    child: InAppWebView(
+                      initialUrlRequest: URLRequest(url: WebUri(courseUrl)),
+                      initialSettings: settings,
+                      onWebViewCreated: (controller) {
+                        webViewController = controller;
+                      },
+                      onLoadStop: (controller, url) async {
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+
+                        // 自动登录
+                        if (url!.path.contains('/cas/login') &&
+                            prefs.getBool('auto_login') == true) {
+                          await webViewController?.evaluateJavascript(
+                              source:
+                                  'javascript:fm1.username.value="$_username";fm1.password.value="$_password";fm1.passbutton.click()');
+                        }
+                        // 设置自定义背景
+                        if (prefs.getString('background') != "") {
+                          await webViewController
+                              ?.evaluateJavascript(source: """
+      
+                            document.body.style.backgroundSize = 'cover';
+                            teste(document.getElementsByTagName("div"));
+                            function teste(array){
+                              for(var i=0; i<array.length; i++) {
+                                array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
+                                teste(array[i].getElementsByTagName("div"));
+                                teste(array[i].getElementsByTagName("ul"));
+                              }
+                            }
+                            """);
+                        }
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    height: 250,
+                    child: InAppWebView(
+                      initialUrlRequest: URLRequest(url: WebUri(courseUrl2)),
+                      initialSettings: settings,
+                      onWebViewCreated: (controller) {
+                        webViewController2 = controller;
+                      },
+                      onLoadStop: (controller, url) async {
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+
+                        // 自动登录
+                        if (url!.path.contains('/cas/login') &&
+                            prefs.getBool('auto_login') == true) {
+                          await controller.evaluateJavascript(
+                              source:
+                                  'javascript:fm1.username.value="$_username";fm1.password.value="$_password";fm1.passbutton.click()');
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          InAppWebView(
-            initialUrlRequest:
-                URLRequest(url: WebUri(addressList[selectedIndex])),
-            initialSettings: settings,
-            onWebViewCreated: (controller) {
-              webViewController = controller;
+          floatingActionButton: FloatingActionButton(
+            child: const Icon(Icons.qr_code),
+            onPressed: () {
+              showQrCode();
             },
-            onLoadStart: (controller, url) {
-              setState(() {
-                this.url = url.toString();
-              });
+          ),
+          drawer: NavigationDrawer(
+            selectedIndex: 10,
+            onDestinationSelected: handleDestinationSelected,
+            children: <Widget>[
+              ListTile(
+                title: Text("极速农大",
+                    style: Theme.of(context).textTheme.headlineMedium),
+                subtitle: GestureDetector(
+                  child: const Text('版本 2.0.0 beta'),
+                  onDoubleTap: () => showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (context) {
+                        return AlertDialog(
+                            title: const Text('鸡你太美'),
+                            content: const Text('你干嘛～哈哈～哎哟～'),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('嗯，哼，哼，啊啊啊啊啊'),
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              TextButton(
+                                child: const Text('Man! What can I say?'),
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ]);
+                      }),
+                ),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '成绩查询',
+                ),
+                icon: Icon(Icons.score),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '校历',
+                ),
+                icon: Icon(Icons.calendar_month),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '校园网',
+                ),
+                icon: Icon(Icons.wifi),
+              ),
+              const Divider(),
+              const ListTile(
+                title: Text('校园网资源'),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '教务系统',
+                ),
+                icon: Icon(Icons.class_),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '图书馆系统',
+                ),
+                icon: Icon(Icons.library_books),
+              ),
+              const Divider(),
+              const ListTile(
+                title: Text('超の发明'),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '校园全景',
+                ),
+                icon: Icon(Icons.vrpano),
+              ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '学生社区',
+                ),
+                icon: Icon(Icons.home_work),
+              ),
+              /*const Divider(),
+              const NavigationDrawerDestination(
+                label: Text(
+                  '必备应用',
+                ),
+                icon: Icon(Icons.apps),
+              ),*/
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void handleDestinationSelected(int index) {
+    switch (index) {
+      case 0:
+        openInquireScore();
+      case 1:
+        openCalendar();
+      case 2:
+        showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (context) {
+              return AlertDialog(
+                  title: const Text('校园网'),
+                  content: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      const Text(
+                          'BYAU和BYAU-WINDOWS主要区别在认证方式不同，优先使用前者，支持自动登录。\n后者为网页登录，且离线一段时间后会自动注销。'),
+                      ListTile(
+                        leading: const Icon(Icons.wifi),
+                        title: const Text('连接BYAU'),
+                        onTap: () {
+                          showDialog(
+                              context: context,
+                              barrierDismissible: true,
+                              builder: (context) {
+                                return AlertDialog(
+                                    title: const Text('如何连接BYAU'),
+                                    content: const Text(
+                                        'EAP方法：PEAP\n阶段2身份验证：MSCHAPv2/不验证\nCA证书：无\n身份：学号\n匿名身份：空\n密码：校园网密码'),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: const Text('确定'),
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ]);
+                              });
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.signal_cellular_nodata),
+                        title: const Text('无法连接？'),
+                        onTap: () {
+                          showDialog(
+                              context: context,
+                              barrierDismissible: true,
+                              builder: (context) {
+                                return AlertDialog(
+                                    title: const Text('无法连接？'),
+                                    content: const Text(
+                                        '1. 确保BYAU和BYAU-WINDOWS均已关闭随机MAC地址/私有地址\n2. 连接BYAU-WINDOWS并进入管理，输入学号密码->自助服务，确保无感知认证已开启\n3. 点击左上角菜单->用户->绑定MAC，删除所有绑定\n4. 重新连接'),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: const Text('进入管理'),
+                                        onPressed: () {
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const WebViewPage(
+                                                        title: '校园网管理',
+                                                        address:
+                                                            'http://10.1.2.1/',
+                                                        username: '',
+                                                        password: '',
+                                                      )));
+                                        },
+                                      ),
+                                      TextButton(
+                                        child: const Text('确定'),
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ]);
+                              });
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.share),
+                        title: const Text('开通经验分享'),
+                        onTap: () {
+                          showDialog(
+                              context: context,
+                              barrierDismissible: true,
+                              builder: (context) {
+                                return AlertDialog(
+                                    title: const Text('开通经验分享'),
+                                    content: ListView(
+                                      shrinkWrap: true,
+                                      children: const [
+                                        Text(
+                                            '更新于2025.3.10\n\n校园网办理需要大庆移动号码\n校内营业厅位置：一食堂和二食堂之间，洗浴中心旁\n校内营业厅只能办49元/月的校园卡，包含150G流量和300分钟通话。\n\n目前黑龙江移动最低资费为9元/月，没有流量和通话，需要到移动自有营业厅办理。（u1s1移动真tm贵）\n若需要办理最低资费的卡，建议去自有大学学府营业厅办理。(本人去大庆分公司办说最低13元/月，实际上是9元/月的套餐加上了4个1元的包，qwq真的冤种)'),
+                                      ],
+                                    ),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: const Text('确定'),
+                                        onPressed: () async {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ]);
+                              });
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.file_present),
+                        title: const Text('官方入网指南'),
+                        onTap: () {
+                          launchInBrowser(
+                              'https://nic.byau.edu.cn/2020/0721/c307a44407/page.htm');
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.settings),
+                        title: const Text('进入管理'),
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const WebViewPage(
+                                        title: '校园网管理',
+                                        address: 'http://10.1.2.1/',
+                                        username: '',
+                                        password: '',
+                                      )));
+                        },
+                      ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      child: const Text('联系售后'),
+                      onPressed: () {
+                        showDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            builder: (context) {
+                              return AlertDialog(
+                                  title: const Text('售后电话'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('服务时间：8:30至20:00'),
+                                      SizedBox(
+                                        height: 4,
+                                      ),
+                                      ListTile(
+                                          leading: Icon(Icons.phone),
+                                          title: Text('198 4597 4477'),
+                                          onTap: () => launchInBrowser(
+                                              'tel:19845974477')),
+                                      ListTile(
+                                          leading: Icon(Icons.phone),
+                                          title: Text('183 4550 0139'),
+                                          onTap: () => launchInBrowser(
+                                              'tel:18345500139')),
+                                    ],
+                                  ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('确定'),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ]);
+                            });
+                      },
+                    ),
+                    TextButton(
+                      child: const Text('取消'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ]);
+            });
+
+      case 3:
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => WebViewPage(
+                      title: '教务系统',
+                      address:
+                          'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
+                      username: _username!,
+                      password: _password!,
+                    )));
+      case 4:
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => WebViewPage(
+                      title: '图书馆系统',
+                      address:
+                          'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Filibopac.byau.edu.cn%2Freader%2Fhwthau.php',
+                      username: _username!,
+                      password: _password!,
+                    )));
+      case 5:
+        launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
+      case 6:
+        launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
+      case 7:
+        showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                  title: const Text('必备应用'),
+                  content: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      ListTile(
+                        title: Text('八一农大'),
+                        subtitle: Text('处理各种事务'),
+                        onTap: () =>
+                            launchInBrowser('https://apps2.byau.edu.cn/'),
+                      ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      child: const Text('确定'),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ]);
+            });
+    }
+  }
+
+  void showQrCode() {
+    showModalBottomSheet(
+        context: context,
+        builder: (context) {
+          return InAppWebView(
+            initialUrlRequest: URLRequest(
+                url: WebUri(
+                    'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Fqrcode.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2Flightapp%2Ferweima%2Fmobile%2Findex.jsp')),
+            initialSettings: InAppWebViewSettings(
+                mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW),
+            onWebViewCreated: (controller) {
+              webViewController3 = controller;
             },
             onLoadStop: (controller, url) async {
               final SharedPreferences prefs =
@@ -402,127 +783,49 @@ class _MyHomePageState extends State<MyHomePage> {
               // 自动登录
               if (url!.path.contains('/cas/login') &&
                   prefs.getBool('auto_login') == true) {
-                await webViewController?.evaluateJavascript(
+                await controller.evaluateJavascript(
                     source:
                         'javascript:fm1.username.value="$_username";fm1.password.value="$_password";fm1.passbutton.click()');
               }
-              // 设置自定义背景
-              if (prefs.getString('background') != "") {
-                if (url.path.contains('srun_portal') |
-                    url.path.contains('lightapp')) {
-                  await webViewController?.evaluateJavascript(source: """
-                            javascript:
-                            document.body.style.background = 'url(${prefs.getString('background')}) center no-repeat';
-                            document.body.style.backgroundSize = 'cover';
-                            teste(document.getElementsByTagName("div"));
-                            function teste(array){
-                              for(var i=0; i<array.length; i++) {
-                                array[i].style.backgroundColor="rgba(255, 255, 255, 0.1)";
-                                teste(array[i].getElementsByTagName("div"));
-                                teste(array[i].getElementsByTagName("ul"));
-                              }
-                            }
-                            """);
-                }
-              }
-              setState(() {
-                this.url = url.toString();
-              });
             },
-            onProgressChanged: (controller, progress) {
-              setState(() {
-                this.progress = progress / 100;
-              });
-            },
-          ),
-          progress < 1.0
-              ? LinearProgressIndicator(value: progress)
-              : Container(),
-        ],
-      ),
-      drawer: NavigationDrawer(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: handleDestinationSelected,
-        children: <Widget>[
-          ListTile(
-            title:
-                Text("极速农大", style: Theme.of(context).textTheme.headlineMedium),
-            subtitle: const Text('版本 1.2.0 beta'),
-            trailing: IconButton(
-                onPressed: () => openSettings(),
-                icon: const Icon(Icons.settings)),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[0]),
-            icon: const Icon(Icons.view_agenda),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[1]),
-            icon: const Icon(Icons.calendar_month),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[2]),
-            icon: const Icon(Icons.qr_code),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[3]),
-            icon: const Icon(Icons.score),
-          ),
-          const Divider(),
-          const ListTile(
-            title: Text('内网资源'),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[4]),
-            icon: const Icon(Icons.wifi),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[5]),
-            icon: const Icon(Icons.class_),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[6]),
-            icon: const Icon(Icons.library_books),
-          ),
-          const Divider(),
-          const ListTile(
-            title: Text('看点好看的'),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[7]),
-            icon: const Icon(Icons.vrpano),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[8]),
-            icon: const Icon(Icons.home_work),
-          ),
-          NavigationDrawerDestination(
-            label: Text(titleList[9]),
-            icon: const Icon(Icons.download),
-          ),
-        ],
-      ),
-    );
+          );
+        });
   }
 
-  void handleDestinationSelected(int index) {
-    switch (index) {
-      case 7 || 8 || 9:
-        launchInBrowser(addressList[index]);
-        return;
-      default:
-        setState(() {
-          selectedIndex = index;
-        });
-        webViewController?.loadUrl(
-            urlRequest: URLRequest(url: WebUri(addressList[index])));
-        Navigator.pop(context);
-    }
+  openInquireScore() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => WebViewPage(
+                  title: '成绩查询',
+                  address:
+                      'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2FinquireScore%2Fmobile%2Findex.html',
+                  username: _username!,
+                  password: _password!,
+                )));
+  }
+
+  openCalendar() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const WebViewPage(
+                  title: '校历',
+                  address: 'https://www.byau.edu.cn/919/list.htm',
+                  username: '',
+                  password: '',
+                )));
   }
 
   void openSettings() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool? autoLogin = await prefs.getBool('auto_login');
+    getUsername() {
+      if (_username == '') {
+        return "未填写";
+      } else {
+        return _username;
+      }
+    }
+
     showModalBottomSheet(
         context: context,
         builder: (context) {
@@ -535,9 +838,8 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
-                title: const Text("自动登录"),
-                subtitle: Text(
-                  _username!,
+                title: Text(
+                  getUsername()!,
                   maxLines: 1,
                 ),
                 onTap: () {
@@ -545,67 +847,34 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.question_mark),
-                title: const Text('忘记密码'),
-                subtitle: const Text('服务大厅密码与校园网不互通'),
+                leading: const Icon(Icons.image),
+                title: const Text("更换背景"),
+                subtitle: const Text('支持GIF动图'),
                 onTap: () async {
-                  launchInBrowser(
-                      'https://imp.byau.edu.cn/_web/_apps/ids/api/passwordRecovery/new.rst');
+                  final ImagePicker picker = ImagePicker();
+                  final XFile? image =
+                      await picker.pickImage(source: ImageSource.gallery);
+                  if (image?.length() != null) {
+                    Directory? document =
+                        await getApplicationDocumentsDirectory();
+                    File bgFile = File('${document.path}/background');
+                    Uint8List imageString = await image!.readAsBytes();
+                    bgFile.create();
+                    await bgFile.writeAsBytes(imageString);
+                    setState(() {});
+                  }
                 },
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () async {
+                    Directory? document =
+                        await getApplicationDocumentsDirectory();
+                    File bgFile = File('${document.path}/background');
+                    bgFile.delete();
+                    setState(() {});
+                  },
+                ),
               ),
-              ListTile(
-                  leading: const Icon(Icons.image),
-                  title: const Text("自定义背景"),
-                  subtitle: Text(_background!),
-                  onTap: () {
-                    showDialog(
-                        barrierDismissible: true,
-                        builder: (context) {
-                          _backgroundEdit.text = _background!;
-                          return AlertDialog(
-                              title: const Text("自定义背景"),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text("仅对课程表、虚拟校园卡、校园网管理生效。"),
-                                  TextField(
-                                    autofocus: true,
-                                    controller: _backgroundEdit,
-                                    onSubmitted: (value) {
-                                      _backgroundEdit.text = value;
-                                    },
-                                    decoration: const InputDecoration(
-                                        labelText: "图片地址（需为 http/https）"),
-                                  ),
-                                ],
-                              ),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: const Text("取消"),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                                TextButton(
-                                  child: const Text("确定"),
-                                  onPressed: () async {
-                                    await prefs.setString(
-                                        'background', _backgroundEdit.text);
-                                    setState(() {
-                                      _background =
-                                          prefs.getString('background')!;
-                                      webViewController?.loadUrl(
-                                          urlRequest:
-                                              URLRequest(url: WebUri(url)));
-                                    });
-
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ]);
-                        },
-                        context: context);
-                  }),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.privacy_tip),
@@ -640,7 +909,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 leading: const Icon(Icons.home),
                 title: const Text('Longhorn3683的小屋'),
                 subtitle: const Text("longhorn3683.github.io"),
-                onTap: () async {
+                onTap: () {
                   launchInBrowser('https://longhorn3683.github.io');
                 },
               ),
@@ -654,10 +923,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         "https://github.com/Longhorn3683/byau_lite");
                   }),
               ListTile(
-                  leading: const Icon(Icons.info),
-                  title: const Text("关于"),
-                  subtitle: const Text("整合常用功能的八一农大第三方app"),
-                  onTap: () {}),
+                leading: const Icon(Icons.info),
+                title: const Text("关于"),
+                subtitle: const Text("整合常用功能的八一农大第三方app"),
+              ),
             ],
           );
         });
