@@ -1,19 +1,15 @@
+import 'dart:io';
+
+import 'package:byau/launch_in_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 
 class WebViewPage extends StatefulWidget {
   final String title;
   final String address;
-  final String username;
-  final String password;
 
-  const WebViewPage(
-      {super.key,
-      required this.title,
-      required this.address,
-      required this.username,
-      required this.password});
+  const WebViewPage({super.key, required this.title, required this.address});
 
   @override
   State<WebViewPage> createState() => _WebViewPageState();
@@ -21,14 +17,6 @@ class WebViewPage extends StatefulWidget {
 
 class _WebViewPageState extends State<WebViewPage> {
   InAppWebViewController? webViewController;
-
-  InAppWebViewSettings settings = InAppWebViewSettings(
-      transparentBackground: true,
-      mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW);
-
-  String url = "";
-
-  double progress = 0;
 
   @override
   void initState() {
@@ -41,6 +29,12 @@ class _WebViewPageState extends State<WebViewPage> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          IconButton(
+              icon: const Icon(Icons.open_in_browser),
+              tooltip: "在浏览器打开",
+              onPressed: () {
+                launchInBrowser(widget.address);
+              }),
           IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: "刷新",
@@ -55,20 +49,23 @@ class _WebViewPageState extends State<WebViewPage> {
         children: [
           InAppWebView(
             initialUrlRequest: URLRequest(url: WebUri(widget.address)),
-            initialSettings: settings,
             onWebViewCreated: (controller) {
               webViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              final SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
+              Directory? document = await getApplicationDocumentsDirectory();
+              File usernameFile = File('${document.path}/username');
+              File passwordFile = File('${document.path}/password');
+              String username = usernameFile.readAsStringSync();
+              String password = passwordFile.readAsStringSync();
 
               // 自动登录
               if (url!.path.contains('/cas/login') &&
-                  prefs.getBool('auto_login') == true) {
+                  username.isNotEmpty &&
+                  password.isNotEmpty) {
                 await webViewController?.evaluateJavascript(
                     source:
-                        'javascript:fm1.username.value="${widget.username}";fm1.password.value="${widget.password}";fm1.passbutton.click()');
+                        'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
               }
             },
           ),

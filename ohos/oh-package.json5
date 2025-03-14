@@ -17,6 +17,8 @@
     "flutter_inappwebview_ohos": "file:./har/flutter_inappwebview_ohos.har",
     "shared_preferences_ohos": "file:./har/shared_preferences_ohos.har",
     "url_launcher_ohos": "file:./har/url_launcher_ohos.har",
-    "@ohos/flutter_module": "file:./entry"
+    "@ohos/flutter_module": "file:./entry",
+    "image_picker_ohos": "file:./har/image_picker_ohos.har",
+    "path_provider_ohos": "file:./har/path_provider_ohos.har"
   }
 }
