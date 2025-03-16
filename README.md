@@ -31,7 +31,7 @@
 ### 原生鸿蒙（HarmonyOS NEXT/5.0）
 >由于应用性质的问题，本app无法以邀请测试的形式上架，因此需侧载安装![](https://raw.githubusercontent.com/Longhorn3683/byau_lite/refs/heads/main/appgallery.png)
 
-1. 下载hap文件
+1. 下载zip文件并解压
 2. 使用侧载工具安装（[安装教程](https://xiaoyi.vc/harmonyos-next-auto-installer.html)）
 
 ## app内还有彩蛋哦～
