@@ -29,7 +29,7 @@
 2. 使用侧载工具安装（Sideloadly之类的都可以）（[安装教程](https://longhorn3683.github.io/2025/03/14/iOS%E5%AE%89%E8%A3%85%E6%9C%AA%E7%AD%BE%E5%90%8Dipa%E5%BA%94%E7%94%A8/)）
 
 ### 原生鸿蒙（HarmonyOS NEXT/5.0）
->由于应用性质的问题，本app无法以邀请测试的形式上架，因此需侧载安装<img src="https://raw.githubusercontent.com/Longhorn3683/byau_lite/refs/heads/main/appgallery.png"  height="400" />
+>由于应用性质的问题，本app无法以邀请测试的形式上架，因此需侧载安装![](https://raw.githubusercontent.com/Longhorn3683/byau_lite/refs/heads/main/appgallery.png)
 
 1. 下载hap文件
 2. 使用侧载工具安装（[安装教程](https://xiaoyi.vc/harmonyos-next-auto-installer.html)）
