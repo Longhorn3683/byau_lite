@@ -15,10 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations(
-    [
-      DeviceOrientation.portraitUp, // 竖屏 Portrait 模式
-      DeviceOrientation.portraitDown,
-    ],
+    [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
   );
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
