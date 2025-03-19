@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:byau/course.dart';
+import 'package:byau/custom_course.dart';
 import 'package:byau/launch_in_browser.dart';
 import 'package:byau/webview.dart';
 import 'package:flutter/foundation.dart';
@@ -367,13 +370,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 actions: [
                   IconButton(
                       icon: const Icon(Icons.refresh),
-                      tooltip: "刷新",
-                      onPressed: () {
-                        refreshHome();
-                      }),
+                      onPressed: () => refreshHome()),
                   IconButton(
-                      onPressed: () => openSettings(),
-                      icon: const Icon(Icons.settings)),
+                      icon: const Icon(Icons.settings),
+                      onPressed: () => openSettings()),
                 ],
               ),
             ),
@@ -396,7 +396,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       onLoadStop: (controller, url) async {
                         Directory? document =
                             await getApplicationDocumentsDirectory();
-
+                        File backgroundFile =
+                            File('${document.path}/background');
                         // 自动登录
                         File usernameFile = File('${document.path}/username');
                         File passwordFile = File('${document.path}/password');
@@ -409,14 +410,41 @@ class _MyHomePageState extends State<MyHomePage> {
                               source:
                                   'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
                         }
-                        // 清除背景
-                        File backgroundFile =
-                            File('${document.path}/background');
 
-                        if (backgroundFile.existsSync()) {
-                          await courseWebViewController
-                              ?.evaluateJavascript(source: """
-                                // 更改背景
+                        String customCourse() {
+                          Directory custom =
+                              Directory('${document.path}/custom/');
+                          if (custom.existsSync()) {
+                            String script = '';
+                            custom.listSync().forEach((e) {
+                              File file = File(e.path);
+                              String albumJson = file.readAsStringSync();
+                              final jsonMap = json.decode(albumJson);
+                              Course course = Course.fromJson(jsonMap);
+                              getColor() {
+                                if (backgroundFile.existsSync()) {
+                                  return 'style="height: 96px;background-color: rgb(255, 255, 255, 0.5);color: #000000"';
+                                } else {
+                                  return 'style="height: 96px;background-color: ${course.color}"';
+                                }
+                              }
+
+                              String cell = '${course.week + course.time * 7}'
+                                  .padLeft(2, '0');
+
+                              script =
+                                  """${script}array[$cell].innerHTML = '<div style="width: 100%;position: relative"><div class="contect-show clickc" ${getColor()}>${course.name}</div></div>';""";
+                            });
+                            return script;
+                          } else {
+                            return '';
+                          }
+                        }
+
+                        // 设置背景
+                        String scheduleBg() {
+                          if (backgroundFile.existsSync()) {
+                            return """
                                 bg(document.getElementsByTagName("div"));
                                 bg(document.getElementsByTagName("ul"));
                                 function bg(array){
@@ -425,20 +453,45 @@ class _MyHomePageState extends State<MyHomePage> {
                                   }
                                 };
 
-                                // 更改各课程背景
+                        """;
+                          } else {
+                            return '';
+                          }
+                        }
+
+                        String courseBg() {
+                          if (backgroundFile.existsSync()) {
+                            return """
+                                                course(document.getElementsByClassName("contect-show clickc"));
+                                                function course(array){
+                                                    for(var i=0; i<array.length; i++) {
+                                                        array[i].style.backgroundColor="rgb(255, 255, 255, 0.5)";
+                                                        array[i].style.color="#000000";
+                                                    }
+                                                };
+
+                        """;
+                          } else {
+                            return '';
+                          }
+                        }
+
+                        await courseWebViewController
+                            ?.evaluateJavascript(source: """
+                                // 更改背景
+                                ${scheduleBg()}
+
+                                // 更改各课程背景/自定义课表
                                 var oldXHR = window.XMLHttpRequest;
                                 function newXHR() {
                                     var realXHR = new oldXHR();
                                     realXHR.addEventListener('readystatechange', function() {
                                         if (realXHR.readyState == 4) {
                                             setTimeout(() => {
-                                                course(document.getElementsByClassName("contect-show clickc"));
-                                                function course(array){
-                                                    for(var i=0; i<array.length; i++) {
-                                                        array[i].style.backgroundColor="rgb(255, 255, 255, 0.5)";
-                                                        array[i].style.color="#000000";
-                                                        console.log(array[i]);
-                                                    }
+                                                ${courseBg()}
+                                                custom(document.getElementsByTagName("td"));
+                                                function custom(array){
+                                                   ${customCourse()}
                                                 };
                                             }, 0);
                                        }
@@ -447,7 +500,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                 }
                                 window.XMLHttpRequest = newXHR;
                             """);
-                        }
                       },
                     ),
                   ),
@@ -476,7 +528,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
                         }
 
-                        //删除顶栏
+                        // 删除顶栏
                         await agendaWebViewController
                             ?.evaluateJavascript(source: """
                               // 删除顶栏
@@ -503,28 +555,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                         array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
                                     }
                                 };
-
-                                // 更改各课程背景
-                                var oldXHR = window.XMLHttpRequest;
-                                function newXHR() {
-                                    var realXHR = new oldXHR();
-                                    realXHR.addEventListener('readystatechange', function() {
-                                        if (realXHR.readyState == 4) {
-                                            setTimeout(() => {
-                                                course(document.getElementsByClassName("contect-show clickc"));
-                                                function course(array){
-                                                   for(var i=0; i<array.length; i++) {
-                                                        array[i].style.backgroundColor="rgb(255, 255, 255, 0.5)";
-                                                        array[i].style.color="#000000";
-                                                        console.log(array[i]);
-                                                    }
-                                                };
-                                            }, 0);
-                                        }
-                                    }, false);
-                                    return realXHR;
-                                }
-                                window.XMLHttpRequest = newXHR;
                             """);
                         }
                       },
@@ -952,6 +982,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void openSettings() async {
     Directory? document = await getApplicationDocumentsDirectory();
     File bgFile = File('${document.path}/background');
+    Directory custom = Directory('${document.path}/custom/');
 
     getUsername() {
       File usernameFile = File('${document.path}/username');
@@ -1010,6 +1041,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     }
                   },
                 ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.view_agenda),
+                title: const Text('自定义课程'),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CustomCoursePage(
+                                directory: custom,
+                              ))).then((val) => refreshHome());
+                },
               ),
               const Divider(),
               ListTile(
