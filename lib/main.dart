@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:byau/course.dart';
 import 'package:byau/custom_course.dart';
 import 'package:byau/launch_in_browser.dart';
-import 'package:byau/wakeup.dart';
 import 'package:byau/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +67,8 @@ class _MyHomePageState extends State<MyHomePage> {
       'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2F_lightapp%2FstudentSchedul%2Fcard3.html';
 
   CookieManager cookieManager = CookieManager.instance();
+
+  bool byau_net = false;
 
   @override
   void initState() {
@@ -397,7 +398,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 title: Text("极速农大",
                     style: Theme.of(context).textTheme.headlineMedium),
                 subtitle: GestureDetector(
-                  child: const Text('版本 2.1.0-beta1'),
+                  child: const Text('版本 2.1.0-beta2'),
                   onDoubleTap: () => showDialog(
                       context: context,
                       barrierDismissible: true,
@@ -445,9 +446,21 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 icon: Icon(Icons.wifi),
               ),
+              const NavigationDrawerDestination(
+                label: Text(
+                  'WebVPN',
+                ),
+                icon: Icon(Icons.vpn_key),
+              ),
               const Divider(),
-              const ListTile(
-                title: Text('校园网资源'),
+              SwitchListTile(
+                title: const Text('内网访问'),
+                value: byau_net,
+                onChanged: (bool value) {
+                  setState(() {
+                    byau_net = value;
+                  });
+                },
               ),
               const NavigationDrawerDestination(
                 label: Text(
@@ -686,14 +699,14 @@ class _MyHomePageState extends State<MyHomePage> {
                             'BYAU和BYAU-WINDOWS主要区别在认证方式不同，优先使用前者，支持自动登录。\n后者为网页登录，且离线一段时间后会自动注销。\n校园网密码与服务大厅密码不互通。'),
                         ListTile(
                           leading: const Icon(Icons.wifi),
-                          title: const Text('连接BYAU'),
+                          title: const Text('连接校园网'),
                           onTap: () {
                             showDialog(
                                 context: context,
                                 barrierDismissible: true,
                                 builder: (context) {
                                   return AlertDialog(
-                                      title: const Text('如何连接BYAU'),
+                                      title: const Text('如何连接校园网'),
                                       content: SizedBox(
                                         width: double.maxFinite,
                                         child: ListView(
@@ -775,7 +788,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                           shrinkWrap: true,
                                           children: const [
                                             Text(
-                                                '更新于2025.3.10\n\n校园网办理需要大庆移动号码\n校内营业厅位置：一食堂和二食堂之间，洗浴中心旁\n校内营业厅只能办49元/月的校园卡，包含150G流量和300分钟通话。\n\n目前黑龙江移动最低资费为9元/月，没有流量和通话，需要到移动自有营业厅办理。（u1s1移动真tm贵）\n若需要办理最低资费的卡，建议去自有大学学府营业厅办理。(本人去大庆分公司办说最低13元/月，实际上是9元/月的套餐加上了4个1元的包，真的冤种qwq)'),
+                                                '更新于2025.4.28\n\n校园网办理需要大庆移动号码\n校内营业厅位置：一食堂和二食堂之间，洗浴中心旁\n校内营业厅只能办49元/月的校园卡，包含150G流量和300分钟通话。\n\n目前黑龙江移动最低资费为9元/月，没有流量和通话，需要到移动自有营业厅办理。（移动真™️贵）\n若需要办理，建议去自有大学学府营业厅。\n(本人去大庆分公司办说最低13元/月，实际上是9元/月的套餐+1年内每月赠送4个1元包。)'),
                                           ],
                                         ),
                                       ),
@@ -863,30 +876,61 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ]);
             });
-
       case 3:
         Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (context) => const WebViewPage(
-                      title: '教务系统',
-                      address:
-                          'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
+                      title: 'WebVPN',
+                      address: 'https://webvpn.byau.edu.cn/',
                     )));
       case 4:
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const WebViewPage(
-                      title: '图书馆系统',
-                      address:
-                          'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Filibopac.byau.edu.cn%2Freader%2Fhwthau.php',
-                    )));
+        if (byau_net == true) {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const WebViewPage(
+                        title: '教务系统',
+                        address:
+                            'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
+                      )));
+        } else {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const WebViewPage(
+                        title: '教务系统',
+                        address:
+                            'https://webvpn.byau.edu.cn/auth/login?returnUrl=https://http-10-255-255-130-80.webvpn.byau.edu.cn/jsxsd/',
+                      )));
+        }
+
       case 5:
-        launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
+        if (byau_net == true) {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const WebViewPage(
+                        title: '图书馆系统',
+                        address:
+                            'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Filibopac.byau.edu.cn%2Freader%2Fhwthau.php',
+                      )));
+        } else {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const WebViewPage(
+                        title: '图书馆系统',
+                        address:
+                            'https://http-ilibopac-byau-edu-cn-80.webvpn.byau.edu.cn/reader/redr_info.php',
+                      )));
+        }
+
       case 6:
-        launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
+        launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
       case 7:
+        launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
+      case 8:
         showDialog(
             context: context,
             builder: (context) {
@@ -1042,11 +1086,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               ListTile(
-                leading: Icon(Icons.upload),
-                title: Text(
+                leading: const Icon(Icons.upload),
+                title: const Text(
                   '导出课表',
                 ),
-                onTap: () => exportCourse(context),
+                subtitle: const Text('可导入WakeUp课程表，支持课程提醒'),
+                onTap: () => launchInBrowser(
+                    'https://longhorn3683.github.io/2025/04/26/%E5%85%AB%E4%B8%80%E5%86%9C%E5%A4%A7%E8%AF%BE%E7%A8%8B%E8%A1%A8%E6%8F%90%E5%8F%96/'),
               ),
               ListTile(
                 leading: const Icon(Icons.view_agenda),
@@ -1114,51 +1160,4 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         });
   }
-}
-
-exportCourse(BuildContext context) {
-  showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        return AlertDialog(
-            title: Text(
-              '导出课表',
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  Text(
-                      '将进入教务系统自动导出csv格式课表，支持导入WakeUp课程表app。\n课表查询页面暂未对手机做适配。\n\n在下方选择当前的网络：')
-                ],
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('取消'),
-                onPressed: () => Navigator.pop(context),
-              ),
-              TextButton(
-                child: const Text('非校园网'),
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => WakeUpPage(
-                              address:
-                                  'https://http-10-1-4-41-80.webvpn.byau.edu.cn/jsxsd/kbcx/kbxx_xzb',
-                            ))),
-              ),
-              TextButton(
-                child: const Text('校园网'),
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => WakeUpPage(
-                              address: 'http://10.1.4.41/jsxsd/kbcx/kbxx_xzb',
-                            ))),
-              ),
-            ]);
-      });
 }
