@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:byau/course.dart';
 import 'package:byau/custom_course.dart';
 import 'package:byau/launch_in_browser.dart';
+import 'package:byau/wakeup.dart';
 import 'package:byau/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -380,189 +381,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           body: Stack(
             fit: StackFit.expand,
-            children: [
-              Column(
-                children: [
-                  SizedBox(
-                    height: MediaQuery.of(context).padding.top + 4,
-                  ),
-                  Expanded(
-                    child: InAppWebView(
-                      initialUrlRequest: URLRequest(url: WebUri(courseUrl)),
-                      initialSettings: settings,
-                      onWebViewCreated: (controller) {
-                        courseWebViewController = controller;
-                      },
-                      onLoadStop: (controller, url) async {
-                        Directory? document =
-                            await getApplicationDocumentsDirectory();
-                        File backgroundFile =
-                            File('${document.path}/background');
-                        // 自动登录
-                        File usernameFile = File('${document.path}/username');
-                        File passwordFile = File('${document.path}/password');
-                        String username = usernameFile.readAsStringSync();
-                        String password = passwordFile.readAsStringSync();
-                        if (url!.path.contains('/cas/login') &&
-                            username.isNotEmpty &&
-                            password.isNotEmpty) {
-                          await courseWebViewController?.evaluateJavascript(
-                              source:
-                                  'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
-                        }
-
-                        String customCourse() {
-                          Directory custom =
-                              Directory('${document.path}/custom/');
-                          if (custom.existsSync()) {
-                            String script = '';
-                            custom.listSync().forEach((e) {
-                              File file = File(e.path);
-                              String albumJson = file.readAsStringSync();
-                              final jsonMap = json.decode(albumJson);
-                              Course course = Course.fromJson(jsonMap);
-                              getColor() {
-                                if (backgroundFile.existsSync()) {
-                                  return 'style="height: 96px;background-color: rgb(255, 255, 255, 0.5);color: #000000"';
-                                } else {
-                                  return 'style="height: 96px;background-color: ${course.color}"';
-                                }
-                              }
-
-                              String cell = '${course.week + course.time * 7}'
-                                  .padLeft(2, '0');
-
-                              script =
-                                  """${script}array[$cell].innerHTML = '<div style="width: 100%;position: relative"><div class="contect-show clickc" ${getColor()}>${course.name}</div></div>';""";
-                            });
-                            return script;
-                          } else {
-                            return '';
-                          }
-                        }
-
-                        // 设置背景
-                        String scheduleBg() {
-                          if (backgroundFile.existsSync()) {
-                            return """
-                                bg(document.getElementsByTagName("div"));
-                                bg(document.getElementsByTagName("ul"));
-                                function bg(array){
-                                  for(var i=0; i<array.length; i++) {
-                                    array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
-                                  }
-                                };
-
-                        """;
-                          } else {
-                            return '';
-                          }
-                        }
-
-                        String courseBg() {
-                          if (backgroundFile.existsSync()) {
-                            return """
-                                                course(document.getElementsByClassName("contect-show clickc"));
-                                                function course(array){
-                                                    for(var i=0; i<array.length; i++) {
-                                                        array[i].style.backgroundColor="rgb(255, 255, 255, 0.5)";
-                                                        array[i].style.color="#000000";
-                                                    }
-                                                };
-
-                        """;
-                          } else {
-                            return '';
-                          }
-                        }
-
-                        await courseWebViewController
-                            ?.evaluateJavascript(source: """
-                                // 更改背景
-                                ${scheduleBg()}
-
-                                // 更改各课程背景/自定义课表
-                                var oldXHR = window.XMLHttpRequest;
-                                function newXHR() {
-                                    var realXHR = new oldXHR();
-                                    realXHR.addEventListener('readystatechange', function() {
-                                        if (realXHR.readyState == 4) {
-                                            setTimeout(() => {
-                                                ${courseBg()}
-                                                custom(document.getElementsByTagName("td"));
-                                                function custom(array){
-                                                   ${customCourse()}
-                                                };
-                                            }, 0);
-                                       }
-                                   }, false);
-                                    return realXHR;
-                                }
-                                window.XMLHttpRequest = newXHR;
-                            """);
-                      },
-                    ),
-                  ),
-                  SizedBox(
-                    height: 200,
-                    child: InAppWebView(
-                      initialUrlRequest: URLRequest(url: WebUri(agendaUrl)),
-                      initialSettings: settings,
-                      onWebViewCreated: (controller) {
-                        agendaWebViewController = controller;
-                      },
-                      onLoadStop: (controller, url) async {
-                        Directory? document =
-                            await getApplicationDocumentsDirectory();
-                        File usernameFile = File('${document.path}/username');
-                        File passwordFile = File('${document.path}/password');
-                        String username = usernameFile.readAsStringSync();
-                        String password = passwordFile.readAsStringSync();
-
-                        // 自动登录
-                        if (url!.path.contains('/cas/login') &&
-                            username.isNotEmpty &&
-                            password.isNotEmpty) {
-                          await agendaWebViewController?.evaluateJavascript(
-                              source:
-                                  'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
-                        }
-
-                        // 删除顶栏
-                        await agendaWebViewController
-                            ?.evaluateJavascript(source: """
-                              // 删除顶栏
-                              tab(document.getElementsByClassName('m-news-title m-news-flex ui-border-b'));
-                              function tab(array){
-                                  for(var i=0; i<array.length; i++) {
-                                      array[i].remove();
-                                  }
-                              };
-                              """);
-
-                        // 清除背景
-                        File backgroundFile =
-                            File('${document.path}/background');
-
-                        if (backgroundFile.existsSync()) {
-                          await agendaWebViewController
-                              ?.evaluateJavascript(source: """
-                                // 更改背景
-                                bg(document.getElementsByTagName("div"));
-                                bg(document.getElementsByTagName("ul"));
-                                function bg(array){
-                                    for(var i=0; i<array.length; i++) {
-                                        array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
-                                    }
-                                };
-                            """);
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            children: [switchHome()],
           ),
           floatingActionButton: FloatingActionButton(
             child: const Icon(Icons.qr_code),
@@ -578,7 +397,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 title: Text("极速农大",
                     style: Theme.of(context).textTheme.headlineMedium),
                 subtitle: GestureDetector(
-                  child: const Text('版本 2.0.0'),
+                  child: const Text('版本 2.1.0-beta1'),
                   onDoubleTap: () => showDialog(
                       context: context,
                       barrierDismissible: true,
@@ -644,7 +463,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               const Divider(),
               const ListTile(
-                title: Text('超の发明'),
+                title: Text('某科学的超哥发明'),
               ),
               const NavigationDrawerDestination(
                 label: Text(
@@ -663,6 +482,186 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ],
     );
+  }
+
+  switchHome() {
+    if (Platform.isMacOS) {
+      return Container();
+    } else {
+      return Column(
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).padding.top + 4,
+          ),
+          Expanded(
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(courseUrl)),
+              initialSettings: settings,
+              onWebViewCreated: (controller) {
+                courseWebViewController = controller;
+              },
+              onLoadStop: (controller, url) async {
+                Directory? document = await getApplicationDocumentsDirectory();
+                File backgroundFile = File('${document.path}/background');
+                // 自动登录
+                File usernameFile = File('${document.path}/username');
+                File passwordFile = File('${document.path}/password');
+                String username = usernameFile.readAsStringSync();
+                String password = passwordFile.readAsStringSync();
+                if (url!.path.contains('/cas/login') &&
+                    username.isNotEmpty &&
+                    password.isNotEmpty) {
+                  await courseWebViewController?.evaluateJavascript(
+                      source:
+                          'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
+                }
+
+                String customCourse() {
+                  Directory custom = Directory('${document.path}/custom/');
+                  if (custom.existsSync()) {
+                    String script = '';
+                    custom.listSync().forEach((e) {
+                      File file = File(e.path);
+                      String albumJson = file.readAsStringSync();
+                      final jsonMap = json.decode(albumJson);
+                      Course course = Course.fromJson(jsonMap);
+                      getColor() {
+                        if (backgroundFile.existsSync()) {
+                          return 'style="height: 96px;background-color: rgb(255, 255, 255, 0.5);color: #000000"';
+                        } else {
+                          return 'style="height: 96px;background-color: ${course.color}"';
+                        }
+                      }
+
+                      String cell =
+                          '${course.week + course.time * 7}'.padLeft(2, '0');
+
+                      script =
+                          """${script}array[$cell].innerHTML = '<div style="width: 100%;position: relative"><div class="contect-show clickc" ${getColor()}>${course.name}</div></div>';""";
+                    });
+                    return script;
+                  } else {
+                    return '';
+                  }
+                }
+
+                // 设置背景
+                String scheduleBg() {
+                  if (backgroundFile.existsSync()) {
+                    return """
+                                bg(document.getElementsByTagName("div"));
+                                bg(document.getElementsByTagName("ul"));
+                                function bg(array){
+                                  for(var i=0; i<array.length; i++) {
+                                    array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
+                                  }
+                                };
+
+                        """;
+                  } else {
+                    return '';
+                  }
+                }
+
+                String courseBg() {
+                  if (backgroundFile.existsSync()) {
+                    return """
+                                                course(document.getElementsByClassName("contect-show clickc"));
+                                                function course(array){
+                                                    for(var i=0; i<array.length; i++) {
+                                                        array[i].style.backgroundColor="rgb(255, 255, 255, 0.5)";
+                                                        array[i].style.color="#000000";
+                                                    }
+                                                };
+
+                        """;
+                  } else {
+                    return '';
+                  }
+                }
+
+                await courseWebViewController?.evaluateJavascript(source: """
+                                // 更改背景
+                                ${scheduleBg()}
+
+                                // 更改各课程背景/自定义课表
+                                var oldXHR = window.XMLHttpRequest;
+                                function newXHR() {
+                                    var realXHR = new oldXHR();
+                                    realXHR.addEventListener('readystatechange', function() {
+                                        if (realXHR.readyState == 4) {
+                                            setTimeout(() => {
+                                                ${courseBg()}
+                                                custom(document.getElementsByTagName("td"));
+                                                function custom(array){
+                                                   ${customCourse()}
+                                                };
+                                            }, 0);
+                                       }
+                                   }, false);
+                                    return realXHR;
+                                }
+                                window.XMLHttpRequest = newXHR;
+                            """);
+              },
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(agendaUrl)),
+              initialSettings: settings,
+              onWebViewCreated: (controller) {
+                agendaWebViewController = controller;
+              },
+              onLoadStop: (controller, url) async {
+                Directory? document = await getApplicationDocumentsDirectory();
+                File usernameFile = File('${document.path}/username');
+                File passwordFile = File('${document.path}/password');
+                String username = usernameFile.readAsStringSync();
+                String password = passwordFile.readAsStringSync();
+
+                // 自动登录
+                if (url!.path.contains('/cas/login') &&
+                    username.isNotEmpty &&
+                    password.isNotEmpty) {
+                  await agendaWebViewController?.evaluateJavascript(
+                      source:
+                          'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
+                }
+
+                // 删除顶栏
+                await agendaWebViewController?.evaluateJavascript(source: """
+                              // 删除顶栏
+                              tab(document.getElementsByClassName('m-news-title m-news-flex ui-border-b'));
+                              function tab(array){
+                                  for(var i=0; i<array.length; i++) {
+                                      array[i].remove();
+                                  }
+                              };
+                              """);
+
+                // 清除背景
+                File backgroundFile = File('${document.path}/background');
+
+                if (backgroundFile.existsSync()) {
+                  await agendaWebViewController?.evaluateJavascript(source: """
+                                // 更改背景
+                                bg(document.getElementsByTagName("div"));
+                                bg(document.getElementsByTagName("ul"));
+                                function bg(array){
+                                    for(var i=0; i<array.length; i++) {
+                                        array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
+                                    }
+                                };
+                            """);
+                }
+              },
+            ),
+          ),
+        ],
+      );
+    }
   }
 
   void handleDestinationSelected(int index) {
@@ -1043,16 +1042,21 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               ListTile(
+                leading: Icon(Icons.upload),
+                title: Text(
+                  '导出课表',
+                ),
+                onTap: () => exportCourse(context),
+              ),
+              ListTile(
                 leading: const Icon(Icons.view_agenda),
                 title: const Text('自定义课程'),
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => CustomCoursePage(
-                                directory: custom,
-                              ))).then((val) => refreshHome());
-                },
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => CustomCoursePage(
+                              directory: custom,
+                            ))).then((val) => refreshHome()),
               ),
               const Divider(),
               ListTile(
@@ -1110,4 +1114,51 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         });
   }
+}
+
+exportCourse(BuildContext context) {
+  showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+            title: Text(
+              '导出课表',
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  Text(
+                      '将进入教务系统自动导出csv格式课表，支持导入WakeUp课程表app。\n课表查询页面暂未对手机做适配。\n\n在下方选择当前的网络：')
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('取消'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              TextButton(
+                child: const Text('非校园网'),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => WakeUpPage(
+                              address:
+                                  'https://http-10-1-4-41-80.webvpn.byau.edu.cn/jsxsd/kbcx/kbxx_xzb',
+                            ))),
+              ),
+              TextButton(
+                child: const Text('校园网'),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => WakeUpPage(
+                              address: 'http://10.1.4.41/jsxsd/kbcx/kbxx_xzb',
+                            ))),
+              ),
+            ]);
+      });
 }

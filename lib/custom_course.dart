@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:byau/course.dart';
+import 'package:byau/main.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -42,7 +43,31 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
           ),
           const SliverToBoxAdapter(
             child: ListTile(
-              title: Text('添加的课程会覆盖对应开始时间的课程，且不支持点击查看课程信息。\n暂不支持添加到时间线。'),
+              leading: Icon(
+                Icons.warning,
+                color: Colors.orange,
+              ),
+              title: Text(
+                '不再建议使用此功能，建议导出课表并导入WakeUp课程表。\nWakeUp课程表支持Android、iOS、鸿蒙5系统，可接入小布建议、YOYO建议，导入系统日程，支持自定义课表、小组件、上课提醒等功能。',
+                style: TextStyle(color: Colors.orange),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: ListTile(
+              leading: Icon(Icons.upload),
+              title: Text(
+                '导出课表',
+              ),
+              onTap: () => exportCourse(context),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Divider(),
+          ),
+          const SliverToBoxAdapter(
+            child: ListTile(
+              title: Text('添加的课程不支持点击查看课程信息，且会覆盖对应开始时间的课程。\n暂不支持添加到时间线。'),
             ),
           ),
           SliverList.builder(
