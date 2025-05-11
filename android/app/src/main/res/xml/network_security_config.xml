@@ -2,5 +2,7 @@
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">byau.edu.cn</domain>
+        <domain includeSubdomains="true">10.1.2.1</domain>
+        <domain includeSubdomains="true">10.1.4.41</domain>
     </domain-config>
 </network-security-config>

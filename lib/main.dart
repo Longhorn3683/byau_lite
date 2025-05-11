@@ -205,7 +205,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
-                      const SizedBox(height: 4),
+                      Text('随时可在首页右上角“设置”中修改。'),
+                      const SizedBox(height: 8),
                       TextField(
                         autofocus: true,
                         controller: usernameEdit,
@@ -269,7 +270,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         prefs.setString('password', passwordEdit.text);
 
                         retry = false; // 重置重试次数
-                        refreshHome();
+                        setState(() {
+                          refreshHome();
+                        });
                         Navigator.pop(context);
                       }
                     },
@@ -1181,6 +1184,16 @@ class _MyHomePageState extends State<MyHomePage> {
     Directory? document = await getApplicationDocumentsDirectory();
     File bgFile = File('${document.path}/background');
     Directory custom = Directory('${document.path}/custom/');
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    getUsername() {
+      if (prefs.getString('username') == null ||
+          prefs.getString('username') != '') {
+        return prefs.getString('username');
+      } else {
+        return '未设置';
+      }
+    }
 
     showModalBottomSheet(
         clipBehavior: Clip.antiAlias,
@@ -1195,7 +1208,10 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
-                title: const Text('登录信息'),
+                title: Text(
+                  getUsername()!,
+                  maxLines: 1,
+                ),
                 onTap: () => showAutoLoginDialog(),
               ),
               ListTile(
