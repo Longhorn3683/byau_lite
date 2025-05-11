@@ -17,15 +17,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(
-    [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
-  );
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
 
   runApp(const BYAUApp());
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 }
 
 class BYAUApp extends StatelessWidget {
@@ -61,14 +59,9 @@ class _MyHomePageState extends State<MyHomePage> {
       transparentBackground: true,
       mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW);
 
-  String courseUrl =
-      'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html';
-  String agendaUrl =
-      'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2F_lightapp%2FstudentSchedul%2Fcard3.html';
-
   CookieManager cookieManager = CookieManager.instance();
 
-  bool byau_net = false;
+  bool webVPN = false;
 
   @override
   void initState() {
@@ -85,6 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   final usernameEdit = TextEditingController();
   final passwordEdit = TextEditingController();
+  bool retry = false;
 
   @override
   dispose() {
@@ -110,41 +104,46 @@ class _MyHomePageState extends State<MyHomePage> {
               canPop: false,
               child: AlertDialog(
                   title: const Text('欢迎使用极速农大'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('免责声明：本应用由开发者独立开发，与学校无关。若有侵权内容，请及时联系开发者删除。'),
-                      const SizedBox(height: 4),
-                      ListTile(
-                        leading: const Icon(Icons.privacy_tip),
-                        title: const Text('隐私政策'),
-                        onTap: () async {
-                          String privacy = await rootBundle
-                              .loadString('assets/privacy_policy.md');
-                          showDialog(
-                              context: context,
-                              barrierDismissible: true,
-                              builder: (context) {
-                                return AlertDialog(
-                                    content: SizedBox(
-                                      width: double.maxFinite,
-                                      child: ListView(
-                                        shrinkWrap: true,
-                                        children: [MarkdownBody(data: privacy)],
+                  content: SizedBox(
+                    width: 250,
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        const Text('免责声明：本应用由开发者独立开发，与学校无关。若有侵权内容，请及时联系开发者删除。'),
+                        const SizedBox(height: 4),
+                        ListTile(
+                          leading: const Icon(Icons.privacy_tip),
+                          title: const Text('隐私政策'),
+                          onTap: () async {
+                            String privacy = await rootBundle
+                                .loadString('assets/privacy_policy.md');
+                            showDialog(
+                                context: context,
+                                barrierDismissible: true,
+                                builder: (context) {
+                                  return AlertDialog(
+                                      content: SizedBox(
+                                        width: double.maxFinite,
+                                        child: ListView(
+                                          shrinkWrap: true,
+                                          children: [
+                                            MarkdownBody(data: privacy)
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    actions: <Widget>[
-                                      TextButton(
-                                        child: const Text('确定'),
-                                        onPressed: () async {
-                                          Navigator.pop(context);
-                                        },
-                                      ),
-                                    ]);
-                              });
-                        },
-                      ),
-                    ],
+                                      actions: <Widget>[
+                                        TextButton(
+                                          child: const Text('确定'),
+                                          onPressed: () async {
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      ]);
+                                });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                   actions: <Widget>[
                     TextButton(
@@ -184,17 +183,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   showAutoLoginDialog() async {
-    Directory? document = await getApplicationDocumentsDirectory();
-    File usernameFile = File('${document.path}/username');
-    File passwordFile = File('${document.path}/password');
-    if (usernameFile.existsSync()) {
-      usernameEdit.text = usernameFile.readAsStringSync();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.getString('username') != null &&
+        prefs.getString('password') != null) {
+      usernameEdit.text = prefs.getString('username')!;
+      passwordEdit.text = prefs.getString('password')!;
     } else {
       usernameEdit.text = '';
-    }
-    if (passwordFile.existsSync()) {
-      passwordEdit.text = passwordFile.readAsStringSync();
-    } else {
       passwordEdit.text = '';
     }
 
@@ -202,88 +197,124 @@ class _MyHomePageState extends State<MyHomePage> {
         barrierDismissible: false,
         builder: (context) {
           return PopScope(
+            canPop: false,
+            child: AlertDialog(
+                title: const Text("登录信息"),
+                content: SizedBox(
+                  width: 250,
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      const SizedBox(height: 4),
+                      TextField(
+                        autofocus: true,
+                        controller: usernameEdit,
+                        onSubmitted: (value) {
+                          usernameEdit.text = value;
+                        },
+                        onEditingComplete: () =>
+                            FocusScope.of(context).nextFocus(),
+                        decoration: const InputDecoration(
+                            labelText: "学号", border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        autofocus: true,
+                        controller: passwordEdit,
+                        onSubmitted: (value) {
+                          passwordEdit.text = value;
+                        },
+                        onEditingComplete: () =>
+                            FocusScope.of(context).unfocus(),
+                        minLines: 1,
+                        maxLines: 1,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                            labelText: "密码", border: OutlineInputBorder()),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text("忘记密码"),
+                    onPressed: () => launchInBrowser(
+                        'https://imp.byau.edu.cn/_web/_apps/ids/api/passwordRecovery/new.rst'),
+                  ),
+                  TextButton(
+                    child: const Text("取消"),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  TextButton(
+                    child: const Text("确定"),
+                    onPressed: () async {
+                      if (usernameEdit.text.isEmpty |
+                          passwordEdit.text.isEmpty) {
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                  content: const Text('信息未填写完整。'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('确定'),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ]);
+                            });
+                      } else {
+                        prefs.setString('username', usernameEdit.text);
+                        prefs.setString('password', passwordEdit.text);
+
+                        retry = false; // 重置重试次数
+                        refreshHome();
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                ]),
+          );
+        },
+        context: context);
+  }
+
+  showWakeUpDialog() {
+    showDialog(
+        context: context,
+        builder: (context) {
+          return PopScope(
               canPop: false,
               child: AlertDialog(
-                  title: const Text("自动登录"),
+                  title: const Text('你知道吗？'),
                   content: SizedBox(
-                    width: double.maxFinite,
+                    width: 300,
                     child: ListView(
                       shrinkWrap: true,
-                      children: [
-                        const SizedBox(height: 4),
-                        TextField(
-                          autofocus: true,
-                          controller: usernameEdit,
-                          onSubmitted: (value) {
-                            usernameEdit.text = value;
-                          },
-                          onEditingComplete: () =>
-                              FocusScope.of(context).nextFocus(),
-                          decoration: const InputDecoration(
-                              labelText: "学号", border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          autofocus: true,
-                          controller: passwordEdit,
-                          onSubmitted: (value) {
-                            passwordEdit.text = value;
-                          },
-                          onEditingComplete: () =>
-                              FocusScope.of(context).unfocus(),
-                          minLines: 1,
-                          maxLines: 1,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                              labelText: "密码", border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 4),
-                        ListTile(
-                          leading: const Icon(Icons.question_mark),
-                          title: const Text("忘记密码"),
-                          onTap: () async {
-                            launchInBrowser(
-                                'https://imp.byau.edu.cn/_web/_apps/ids/api/passwordRecovery/new.rst');
-                          },
-                        ),
+                      children: const [
+                        Text(
+                            '现已发布导出课表教程，支持导入WakeUp课程表。\nWakeUp课程表可接入小布建议、YOYO建议，可导入系统日程，支持自定义课表、小组件、上课提醒等功能。'),
                       ],
                     ),
                   ),
                   actions: <Widget>[
                     TextButton(
-                      child: const Text("取消"),
-                      onPressed: () async {
-                        Navigator.pop(context);
-                      },
+                      child: const Text('导出教程'),
+                      onPressed: () =>
+                          launchInBrowser('https://pd.qq.com/s/bbjc2guo9?b=2'),
                     ),
                     TextButton(
-                      child: const Text("确定"),
+                      child: const Text('确定'),
                       onPressed: () async {
-                        if (usernameEdit.text.isNotEmpty) {
-                          await usernameFile.create();
-                          await usernameFile.writeAsString(usernameEdit.text);
-                        } else if (usernameFile.existsSync()) {
-                          await usernameFile.delete();
-                        }
-                        if (passwordEdit.text.isNotEmpty) {
-                          await passwordFile.create();
-                          await passwordFile.writeAsString(passwordEdit.text);
-                        } else if (passwordFile.existsSync()) {
-                          await passwordFile.delete();
-                        }
-                        if (usernameEdit.text.isNotEmpty &&
-                            passwordEdit.text.isNotEmpty) {
-                          courseWebViewController?.loadUrl(
-                              urlRequest: URLRequest(url: WebUri(courseUrl)));
-                          agendaWebViewController?.loadUrl(
-                              urlRequest: URLRequest(url: WebUri(agendaUrl)));
-                        }
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        prefs.setBool("wakeup", true);
                         Navigator.pop(context);
                       },
                     ),
                   ]));
-        },
-        context: context);
+        });
   }
 
   initializeQuickActions() async {
@@ -291,25 +322,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
     quickActions.setShortcutItems(<ShortcutItem>[
       const ShortcutItem(
-          type: '虚拟校园卡', localizedTitle: '虚拟校园卡', icon: 'qa_code'),
+          type: 'code', localizedTitle: '虚拟校园卡', icon: 'qa_code'),
       const ShortcutItem(
-          type: '成绩查询', localizedTitle: '成绩查询', icon: 'qa_score'),
-      const ShortcutItem(type: '校历', localizedTitle: '校历', icon: 'qa_calendar'),
+          type: 'score', localizedTitle: '成绩查询', icon: 'qa_score'),
+      const ShortcutItem(
+          type: 'calendar', localizedTitle: '校历', icon: 'qa_calendar'),
     ]);
 
     await quickActions.initialize((String shortcutType) {
       switch (shortcutType) {
-        case '虚拟校园卡':
-          showQrCode();
-          return;
+        case 'code':
+          showQrCode(false);
 
-        case '成绩查询':
+        case 'score':
           openInquireScore();
-          return;
 
-        case '校历':
+        case 'calendar':
           openCalendar();
-          return;
       }
     });
   }
@@ -326,242 +355,264 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        FutureBuilder(
-          future: getBackground(),
-          builder: (BuildContext context, AsyncSnapshot snapshot) {
-            if (snapshot.connectionState == ConnectionState.done) {
-              if (snapshot.hasError) {
-                // 请求失败，显示错误
+    return Stack(fit: StackFit.expand, children: [
+      FutureBuilder(
+        future: getBackground(),
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            if (snapshot.hasError) {
+              // 请求失败，显示错误
+              return Container(
+                  color: ThemeData.light().scaffoldBackgroundColor);
+            } else {
+              // 请求成功，显示数据
+              if (snapshot.data == 114514) {
                 return Container(
                     color: ThemeData.light().scaffoldBackgroundColor);
               } else {
-                // 请求成功，显示数据
-                if (snapshot.data == 114514) {
-                  return Container(
-                      color: ThemeData.light().scaffoldBackgroundColor);
-                } else {
-                  return Image.file(
-                    snapshot.data,
-                    fit: BoxFit.cover,
-                  );
-                }
+                return Image.file(
+                  snapshot.data,
+                  fit: BoxFit.cover,
+                );
               }
-            } else {
-              return Container(
-                  color: ThemeData.light().scaffoldBackgroundColor);
             }
-          },
-        ),
-        Container(
-          color: Colors.white54,
-        ),
-        Scaffold(
-          extendBodyBehindAppBar: true,
-          resizeToAvoidBottomInset: false,
-          backgroundColor: Colors.transparent,
-          appBar: PreferredSize(
-            preferredSize: const Size(double.infinity, kToolbarHeight),
-            child: Theme(
-              data: ThemeData.light(),
-              child: AppBar(
-                systemOverlayStyle: SystemUiOverlayStyle.dark,
-                backgroundColor: Colors.transparent,
-                actions: [
-                  IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => refreshHome()),
-                  IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () => openSettings()),
-                ],
-              ),
-            ),
-          ),
-          body: Stack(
-            fit: StackFit.expand,
-            children: [switchHome()],
-          ),
-          floatingActionButton: FloatingActionButton(
-            child: const Icon(Icons.qr_code),
-            onPressed: () {
-              showQrCode();
-            },
-          ),
-          drawer: NavigationDrawer(
-            selectedIndex: 10,
-            onDestinationSelected: handleDestinationSelected,
-            children: <Widget>[
-              ListTile(
-                title: Text("极速农大",
-                    style: Theme.of(context).textTheme.headlineMedium),
-                subtitle: GestureDetector(
-                  child: const Text('版本 2.1.0-beta2'),
-                  onDoubleTap: () => showDialog(
-                      context: context,
-                      barrierDismissible: true,
-                      builder: (context) {
-                        return AlertDialog(
-                            title: const Text('你干嘛～哈哈～哎哟～'),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('原始人，起洞'),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                              TextButton(
-                                child: const Text('嗯，哼，哼，啊啊啊啊啊'),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                              TextButton(
-                                child: const Text('Man! What can I say?'),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ]);
-                      }),
+          } else {
+            return Container(color: ThemeData.light().scaffoldBackgroundColor);
+          }
+        },
+      ),
+      Container(
+        color: Colors.white70,
+      ),
+      LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          if (constraints.maxWidth > 500) {
+            // 平板/折叠屏适配
+            return Scaffold(
+              resizeToAvoidBottomInset: false,
+              extendBodyBehindAppBar: true,
+              backgroundColor: Colors.transparent,
+              appBar: PreferredSize(
+                preferredSize: const Size(double.infinity, kToolbarHeight),
+                child: Theme(
+                  data: ThemeData.light(),
+                  child: AppBar(
+                    systemOverlayStyle: SystemUiOverlayStyle.dark,
+                    backgroundColor: Colors.transparent,
+                    actions: [
+                      IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: '刷新',
+                          onPressed: () => refreshHome()),
+                      IconButton(
+                          icon: const Icon(Icons.settings),
+                          tooltip: '设置',
+                          onPressed: () => openSettings()),
+                    ],
+                  ),
                 ),
               ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '成绩查询',
+              body: SafeArea(
+                top: false,
+                child: Flex(
+                  direction: Axis.horizontal,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Padding(
+                          padding: EdgeInsets.only(
+                              top: MediaQuery.of(context).padding.top + 4),
+                          child: courseWebView()),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Padding(
+                          padding: EdgeInsets.only(
+                              top: MediaQuery.of(context).padding.top +
+                                  kToolbarHeight),
+                          child: todayWebView()),
+                    ),
+                  ],
                 ),
-                icon: Icon(Icons.score),
               ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '校历',
-                ),
-                icon: Icon(Icons.calendar_month),
-              ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '校园网',
-                ),
-                icon: Icon(Icons.wifi),
-              ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  'WebVPN',
-                ),
-                icon: Icon(Icons.vpn_key),
-              ),
-              const Divider(),
-              SwitchListTile(
-                title: const Text('内网访问'),
-                value: byau_net,
-                onChanged: (bool value) {
-                  setState(() {
-                    byau_net = value;
-                  });
+              floatingActionButton: FloatingActionButton(
+                tooltip: '虚拟校园卡',
+                child: const Icon(Icons.qr_code),
+                onPressed: () {
+                  showQrCode(true);
                 },
               ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '教务系统',
+              drawer: drawer(),
+            );
+          } else if (constraints.maxHeight > 500) {
+            // 手机
+            return Scaffold(
+              extendBodyBehindAppBar: true,
+              resizeToAvoidBottomInset: false,
+              backgroundColor: Colors.transparent,
+              appBar: PreferredSize(
+                preferredSize: const Size(double.infinity, kToolbarHeight),
+                child: Theme(
+                  data: ThemeData.light(),
+                  child: AppBar(
+                    systemOverlayStyle: SystemUiOverlayStyle.dark,
+                    backgroundColor: Colors.transparent,
+                    actions: [
+                      IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: '刷新',
+                          onPressed: () => refreshHome()),
+                      IconButton(
+                          icon: const Icon(Icons.settings),
+                          tooltip: '设置',
+                          onPressed: () => openSettings()),
+                    ],
+                  ),
                 ),
-                icon: Icon(Icons.class_),
               ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '图书馆系统',
+              body: Column(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).padding.top + 4,
+                  ),
+                  Expanded(child: courseWebView()),
+                  SizedBox(height: 200, child: todayWebView()),
+                ],
+              ),
+              floatingActionButton: FloatingActionButton(
+                tooltip: '虚拟校园卡',
+                onPressed: () {
+                  showQrCode(true);
+                },
+                child: const Icon(Icons.qr_code),
+              ),
+              drawer: drawer(),
+            );
+          } else {
+            // 小折叠外屏？
+            return Scaffold(
+              extendBodyBehindAppBar: true,
+              resizeToAvoidBottomInset: false,
+              backgroundColor: Colors.transparent,
+              appBar: PreferredSize(
+                preferredSize: const Size(double.infinity, kToolbarHeight),
+                child: Theme(
+                  data: ThemeData.light(),
+                  child: AppBar(
+                    systemOverlayStyle: SystemUiOverlayStyle.dark,
+                    backgroundColor: Colors.transparent,
+                    actions: [
+                      IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: '刷新',
+                          onPressed: () => refreshHome()),
+                      IconButton(
+                          icon: const Icon(Icons.settings),
+                          tooltip: '设置',
+                          onPressed: () => openSettings()),
+                    ],
+                  ),
                 ),
-                icon: Icon(Icons.library_books),
               ),
-              const Divider(),
-              const ListTile(
-                title: Text('某科学的超哥发明'),
+              body: Column(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).padding.top + 4,
+                  ),
+                  Expanded(child: courseWebView()),
+                ],
               ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '校园全景',
-                ),
-                icon: Icon(Icons.vrpano),
+              floatingActionButton: FloatingActionButton(
+                tooltip: '虚拟校园卡',
+                onPressed: () {
+                  showQrCode(true);
+                },
+                child: const Icon(Icons.qr_code),
               ),
-              const NavigationDrawerDestination(
-                label: Text(
-                  '学生社区',
-                ),
-                icon: Icon(Icons.home_work),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+              drawer: drawer(),
+            );
+          }
+        },
+      ),
+    ]);
   }
 
-  switchHome() {
-    if (Platform.isMacOS) {
-      return Container();
-    } else {
-      return Column(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).padding.top + 4,
-          ),
-          Expanded(
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(courseUrl)),
-              initialSettings: settings,
-              onWebViewCreated: (controller) {
-                courseWebViewController = controller;
-              },
-              onLoadStop: (controller, url) async {
-                Directory? document = await getApplicationDocumentsDirectory();
-                File backgroundFile = File('${document.path}/background');
-                // 自动登录
-                File usernameFile = File('${document.path}/username');
-                File passwordFile = File('${document.path}/password');
-                String username = usernameFile.readAsStringSync();
-                String password = passwordFile.readAsStringSync();
-                if (url!.path.contains('/cas/login') &&
-                    username.isNotEmpty &&
-                    password.isNotEmpty) {
-                  await courseWebViewController?.evaluateJavascript(
-                      source:
-                          'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
-                }
+  Widget courseWebView() {
+    return InAppWebView(
+      initialSettings: settings,
+      initialUrlRequest: URLRequest(
+          url: WebUri(
+              'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html')),
+      onWebViewCreated: (controller) {
+        courseWebViewController = controller;
+      },
+      onLoadStop: (controller, url) async {
+        Directory? document = await getApplicationDocumentsDirectory();
+        File backgroundFile = File('${document.path}/background');
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-                String customCourse() {
-                  Directory custom = Directory('${document.path}/custom/');
-                  if (custom.existsSync()) {
-                    String script = '';
-                    custom.listSync().forEach((e) {
-                      File file = File(e.path);
-                      String albumJson = file.readAsStringSync();
-                      final jsonMap = json.decode(albumJson);
-                      Course course = Course.fromJson(jsonMap);
-                      getColor() {
-                        if (backgroundFile.existsSync()) {
-                          return 'style="height: 96px;background-color: rgb(255, 255, 255, 0.5);color: #000000"';
-                        } else {
-                          return 'style="height: 96px;background-color: ${course.color}"';
-                        }
-                      }
+        if (url!.path.contains('/cas/login')) {
+          // 登录页面
+          // 自动登录
+          if (prefs.getString('username') != null &&
+              prefs.getString('password') != null) {
+            // 有登录信息且未触发重试
+            if (retry == false) {
+              await controller.evaluateJavascript(
+                  source:
+                      'javascript:fm1.username.value="${prefs.getString('username')}";fm1.password.value="${prefs.getString('password')}";fm1.passbutton.click()');
+              retry = true;
+            }
+          }
+        } else if (url.path
+            .contains('_web/_lightapp/schedule/mobile/student/index.html')) {
+          // 登录成功
+          retry = false;
+          agendaWebViewController?.loadUrl(
+              urlRequest: URLRequest(
+                  url: WebUri(
+                      'https://light.byau.edu.cn/_web/_customizes/byau/_lightapp/studentSchedul/card3.html')));
+          codeWebViewController?.loadUrl(
+              urlRequest: URLRequest(
+                  url: WebUri(
+                      'https://qrcode.byau.edu.cn/_web/_customizes/byau/lightapp/erweima/mobile/index.jsp')));
 
-                      String cell =
-                          '${course.week + course.time * 7}'.padLeft(2, '0');
+          // 提示导出课表
+          if (prefs.getBool('wakeup') == null) showWakeUpDialog();
 
-                      script =
-                          """${script}array[$cell].innerHTML = '<div style="width: 100%;position: relative"><div class="contect-show clickc" ${getColor()}>${course.name}</div></div>';""";
-                    });
-                    return script;
+          String customCourse() {
+            Directory custom = Directory('${document.path}/custom/');
+            if (custom.existsSync()) {
+              String script = '';
+              custom.listSync().forEach((e) {
+                File file = File(e.path);
+                String albumJson = file.readAsStringSync();
+                final jsonMap = json.decode(albumJson);
+                Course course = Course.fromJson(jsonMap);
+                getColor() {
+                  if (backgroundFile.existsSync()) {
+                    return 'style="height: 96px;background-color: rgb(255, 255, 255, 0.5);color: #000000"';
                   } else {
-                    return '';
+                    return 'style="height: 96px;background-color: ${course.color}"';
                   }
                 }
 
-                // 设置背景
-                String scheduleBg() {
-                  if (backgroundFile.existsSync()) {
-                    return """
+                String cell =
+                    '${course.week + course.time * 7}'.padLeft(2, '0');
+
+                script =
+                    """${script}array[$cell].innerHTML = '<div style="width: 100%;position: relative"><div class="contect-show clickc" ${getColor()}>${course.name}</div></div>';""";
+              });
+              return script;
+            } else {
+              return '';
+            }
+          }
+
+          // 设置背景
+          String scheduleBg() {
+            if (backgroundFile.existsSync()) {
+              return """
                                 bg(document.getElementsByTagName("div"));
                                 bg(document.getElementsByTagName("ul"));
                                 function bg(array){
@@ -571,14 +622,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                 };
 
                         """;
-                  } else {
-                    return '';
-                  }
-                }
+            } else {
+              return '';
+            }
+          }
 
-                String courseBg() {
-                  if (backgroundFile.existsSync()) {
-                    return """
+          String courseBg() {
+            if (backgroundFile.existsSync()) {
+              return """
                                                 course(document.getElementsByClassName("contect-show clickc"));
                                                 function course(array){
                                                     for(var i=0; i<array.length; i++) {
@@ -588,12 +639,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 };
 
                         """;
-                  } else {
-                    return '';
-                  }
-                }
+            } else {
+              return '';
+            }
+          }
 
-                await courseWebViewController?.evaluateJavascript(source: """
+          await courseWebViewController?.evaluateJavascript(source: """
                                 // 更改背景
                                 ${scheduleBg()}
 
@@ -616,36 +667,22 @@ class _MyHomePageState extends State<MyHomePage> {
                                 }
                                 window.XMLHttpRequest = newXHR;
                             """);
-              },
-            ),
-          ),
-          SizedBox(
-            height: 200,
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(agendaUrl)),
-              initialSettings: settings,
-              onWebViewCreated: (controller) {
-                agendaWebViewController = controller;
-              },
-              onLoadStop: (controller, url) async {
-                Directory? document = await getApplicationDocumentsDirectory();
-                File usernameFile = File('${document.path}/username');
-                File passwordFile = File('${document.path}/password');
-                String username = usernameFile.readAsStringSync();
-                String password = passwordFile.readAsStringSync();
+        }
+      },
+    );
+  }
 
-                // 自动登录
-                if (url!.path.contains('/cas/login') &&
-                    username.isNotEmpty &&
-                    password.isNotEmpty) {
-                  await agendaWebViewController?.evaluateJavascript(
-                      source:
-                          'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
-                }
+  Widget todayWebView() {
+    return InAppWebView(
+      initialSettings: settings,
+      onWebViewCreated: (controller) {
+        agendaWebViewController = controller;
+      },
+      onLoadStop: (controller, url) async {
+        Directory? document = await getApplicationDocumentsDirectory();
 
-                // 删除顶栏
-                await agendaWebViewController?.evaluateJavascript(source: """
-                              // 删除顶栏
+        // 删除顶栏
+        await agendaWebViewController?.evaluateJavascript(source: """
                               tab(document.getElementsByClassName('m-news-title m-news-flex ui-border-b'));
                               function tab(array){
                                   for(var i=0; i<array.length; i++) {
@@ -654,11 +691,10 @@ class _MyHomePageState extends State<MyHomePage> {
                               };
                               """);
 
-                // 清除背景
-                File backgroundFile = File('${document.path}/background');
-
-                if (backgroundFile.existsSync()) {
-                  await agendaWebViewController?.evaluateJavascript(source: """
+        // 清除背景
+        File backgroundFile = File('${document.path}/background');
+        if (backgroundFile.existsSync()) {
+          await agendaWebViewController?.evaluateJavascript(source: """
                                 // 更改背景
                                 bg(document.getElementsByTagName("div"));
                                 bg(document.getElementsByTagName("ul"));
@@ -668,13 +704,114 @@ class _MyHomePageState extends State<MyHomePage> {
                                     }
                                 };
                             """);
-                }
-              },
-            ),
+        }
+      },
+    );
+  }
+
+  Widget drawer() {
+    return NavigationDrawer(
+      selectedIndex: 10,
+      onDestinationSelected: handleDestinationSelected,
+      children: <Widget>[
+        ListTile(
+          title:
+              Text("极速农大", style: Theme.of(context).textTheme.headlineMedium),
+          subtitle: GestureDetector(
+            child: const Text('版本 2.1.0'),
+            onDoubleTap: () => showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (context) {
+                  return AlertDialog(
+                      title: const Text('你干嘛～哈哈～哎哟～'),
+                      actions: <Widget>[
+                        TextButton(
+                          child: const Text('原始人，起洞'),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        TextButton(
+                          child: const Text('嗯，哼，哼，啊啊啊啊啊'),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        TextButton(
+                          child: const Text('Man! What can I say?'),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ]);
+                }),
           ),
-        ],
-      );
-    }
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '成绩查询',
+          ),
+          icon: Icon(Icons.score),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '校历',
+          ),
+          icon: Icon(Icons.calendar_month),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '校园网',
+          ),
+          icon: Icon(Icons.wifi),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            'WebVPN',
+          ),
+          icon: Icon(Icons.vpn_key),
+        ),
+        const Divider(),
+        SwitchListTile(
+          title: const Text('WebVPN访问'),
+          value: webVPN,
+          onChanged: (bool value) {
+            setState(() {
+              webVPN = value;
+            });
+          },
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '教务系统',
+          ),
+          icon: Icon(Icons.class_),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '图书馆系统',
+          ),
+          icon: Icon(Icons.library_books),
+        ),
+        const Divider(),
+        const ListTile(
+          title: Text('某科学的超哥发明'),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '校园全景',
+          ),
+          icon: Icon(Icons.vrpano),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
+            '学生社区',
+          ),
+          icon: Icon(Icons.home_work),
+        ),
+      ],
+    );
   }
 
   void handleDestinationSelected(int index) {
@@ -691,7 +828,7 @@ class _MyHomePageState extends State<MyHomePage> {
               return AlertDialog(
                   title: const Text('校园网'),
                   content: SizedBox(
-                    width: double.maxFinite,
+                    width: 300,
                     child: ListView(
                       shrinkWrap: true,
                       children: [
@@ -708,7 +845,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   return AlertDialog(
                                       title: const Text('如何连接校园网'),
                                       content: SizedBox(
-                                        width: double.maxFinite,
+                                        width: 300,
                                         child: ListView(
                                           shrinkWrap: true,
                                           children: const [
@@ -739,7 +876,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   return AlertDialog(
                                       title: const Text('无法连接'),
                                       content: SizedBox(
-                                        width: double.maxFinite,
+                                        width: 300,
                                         child: ListView(
                                           shrinkWrap: true,
                                           children: const [
@@ -783,7 +920,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   return AlertDialog(
                                       title: const Text('开通经验分享'),
                                       content: SizedBox(
-                                        width: double.maxFinite,
+                                        width: 300,
                                         child: ListView(
                                           shrinkWrap: true,
                                           children: const [
@@ -885,7 +1022,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       address: 'https://webvpn.byau.edu.cn/',
                     )));
       case 4:
-        if (byau_net == true) {
+        if (webVPN == false) {
           Navigator.push(
               context,
               MaterialPageRoute(
@@ -906,7 +1043,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }
 
       case 5:
-        if (byau_net == true) {
+        if (webVPN == false) {
           Navigator.push(
               context,
               MaterialPageRoute(
@@ -960,41 +1097,59 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   refreshHome() {
-    setState(() {
-      courseWebViewController?.loadUrl(
-          urlRequest: URLRequest(url: WebUri(courseUrl)));
-      agendaWebViewController?.loadUrl(
-          urlRequest: URLRequest(url: WebUri(agendaUrl)));
-    });
+    courseWebViewController?.loadUrl(
+        urlRequest: URLRequest(
+            url: WebUri(
+                'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html')));
   }
 
-  void showQrCode() {
+  void showQrCode(bool value) {
+    String initialUrl = value
+        ? 'https://qrcode.byau.edu.cn/_web/_customizes/byau/lightapp/erweima/mobile/index.jsp'
+        : '';
+    bool refresh = false;
     showModalBottomSheet(
         context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+        ),
         builder: (context) {
           return InAppWebView(
-            initialUrlRequest: URLRequest(
-                url: WebUri(
-                    'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2Fqrcode.byau.edu.cn%2F_web%2F_customizes%2Fbyau%2Flightapp%2Ferweima%2Fmobile%2Findex.jsp')),
-            initialSettings: InAppWebViewSettings(
-                mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW),
+            initialUrlRequest: URLRequest(url: WebUri(initialUrl)),
+            initialSettings: settings,
             onWebViewCreated: (controller) {
               codeWebViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              Directory? document = await getApplicationDocumentsDirectory();
-              File usernameFile = File('${document.path}/username');
-              File passwordFile = File('${document.path}/password');
-              String username = usernameFile.readAsStringSync();
-              String password = passwordFile.readAsStringSync();
+              if (url!.path.contains('/cas/login')) {
+                // 登录页面
+                // 自动登录
+                final SharedPreferences prefs =
+                    await SharedPreferences.getInstance();
+                if (prefs.getString('username') != null &&
+                    prefs.getString('password') != null) {
+                  // 有登录信息且未触发重试
+                  if (retry == false) {
+                    await controller.evaluateJavascript(
+                        source:
+                            'javascript:fm1.username.value="${prefs.getString('username')}";fm1.password.value="${prefs.getString('password')}";fm1.passbutton.click()');
+                    retry = true;
+                  }
+                }
+              } else {
+                // 修复二维码无法显示
+                await controller.evaluateJavascript(source: '''
+                  let meta = document.createElement('meta');
+                  meta.httpEquiv = "Content-Security-Policy";
+                  meta.content = "upgrade-insecure-requests";
+                  document.getElementsByTagName('head')[0].appendChild(meta);
 
-              // 自动登录
-              if (url!.path.contains('/cas/login') &&
-                  username.isNotEmpty &&
-                  password.isNotEmpty) {
-                await codeWebViewController?.evaluateJavascript(
-                    source:
-                        'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
+                ''');
+                if (refresh == false) {
+                  await controller.evaluateJavascript(
+                      source: 'location.reload();');
+                  refresh = true;
+                }
               }
             },
           );
@@ -1027,16 +1182,6 @@ class _MyHomePageState extends State<MyHomePage> {
     File bgFile = File('${document.path}/background');
     Directory custom = Directory('${document.path}/custom/');
 
-    getUsername() {
-      File usernameFile = File('${document.path}/username');
-      if (usernameFile.existsSync()) {
-        String username = usernameFile.readAsStringSync();
-        return username;
-      } else {
-        return '未设置';
-      }
-    }
-
     showModalBottomSheet(
         clipBehavior: Clip.antiAlias,
         context: context,
@@ -1050,18 +1195,13 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
-                title: Text(
-                  getUsername(),
-                  maxLines: 1,
-                ),
-                onTap: () {
-                  showAutoLoginDialog();
-                },
+                title: const Text('登录信息'),
+                onTap: () => showAutoLoginDialog(),
               ),
               ListTile(
                 leading: const Icon(Icons.image),
                 title: const Text("更换背景"),
-                subtitle: const Text('支持GIF动图'),
+                subtitle: const Text('支持GIF动图，按住以删除背景'),
                 onTap: () async {
                   final ImagePicker picker = ImagePicker();
                   final XFile? image =
@@ -1072,18 +1212,19 @@ class _MyHomePageState extends State<MyHomePage> {
                     Uint8List imageBytes = await image!.readAsBytes();
                     bgFile.create();
                     await bgFile.writeAsBytes(imageBytes);
-                    refreshHome();
+                    setState(() {
+                      refreshHome();
+                    });
                   }
                 },
-                trailing: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () async {
-                    if (bgFile.existsSync()) {
-                      bgFile.delete();
+                onLongPress: () {
+                  if (bgFile.existsSync()) {
+                    bgFile.delete();
+                    setState(() {
                       refreshHome();
-                    }
-                  },
-                ),
+                    });
+                  }
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.upload),
@@ -1091,8 +1232,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   '导出课表',
                 ),
                 subtitle: const Text('可导入WakeUp课程表，支持课程提醒'),
-                onTap: () => launchInBrowser(
-                    'https://longhorn3683.github.io/2025/04/26/%E5%85%AB%E4%B8%80%E5%86%9C%E5%A4%A7%E8%AF%BE%E7%A8%8B%E8%A1%A8%E6%8F%90%E5%8F%96/'),
+                onTap: () =>
+                    launchInBrowser('https://pd.qq.com/s/bbjc2guo9?b=2'),
               ),
               ListTile(
                 leading: const Icon(Icons.view_agenda),
@@ -1105,6 +1246,31 @@ class _MyHomePageState extends State<MyHomePage> {
                             ))).then((val) => refreshHome()),
               ),
               const Divider(),
+              ListTile(
+                leading: const Icon(Icons.message),
+                title: const Text('加入频道'),
+                subtitle: const Text("应用更新、反馈、吹水"),
+                onTap: () {
+                  launchInBrowser('https://pd.qq.com/s/at5gp2fia?b=9');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text('Longhorn3683的小屋'),
+                subtitle: const Text("longhorn3683.github.io"),
+                onTap: () {
+                  launchInBrowser('https://longhorn3683.github.io');
+                },
+              ),
+              ListTile(
+                  leading: const Icon(Icons.code),
+                  title: const Text("项目地址"),
+                  subtitle:
+                      const Text("https://github.com/Longhorn3683/byau_lite"),
+                  onTap: () {
+                    launchInBrowser(
+                        "https://github.com/Longhorn3683/byau_lite");
+                  }),
               ListTile(
                 leading: const Icon(Icons.privacy_tip),
                 title: const Text('隐私政策'),
@@ -1134,23 +1300,6 @@ class _MyHomePageState extends State<MyHomePage> {
                       });
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.home),
-                title: const Text('Longhorn3683的小屋'),
-                subtitle: const Text("longhorn3683.github.io"),
-                onTap: () {
-                  launchInBrowser('https://longhorn3683.github.io');
-                },
-              ),
-              ListTile(
-                  leading: const Icon(Icons.code),
-                  title: const Text("项目地址"),
-                  subtitle:
-                      const Text("https://github.com/Longhorn3683/byau_lite"),
-                  onTap: () {
-                    launchInBrowser(
-                        "https://github.com/Longhorn3683/byau_lite");
-                  }),
               const ListTile(
                 leading: Icon(Icons.info),
                 title: Text("关于"),

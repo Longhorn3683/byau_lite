@@ -1,9 +1,7 @@
-import 'dart:io';
-
 import 'package:byau/launch_in_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WebViewPage extends StatefulWidget {
   final String title;
@@ -25,6 +23,7 @@ class _WebViewPageState extends State<WebViewPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool retry = false;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -53,19 +52,21 @@ class _WebViewPageState extends State<WebViewPage> {
               webViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              Directory? document = await getApplicationDocumentsDirectory();
-              File usernameFile = File('${document.path}/username');
-              File passwordFile = File('${document.path}/password');
-              String username = usernameFile.readAsStringSync();
-              String password = passwordFile.readAsStringSync();
-
-              // 自动登录
-              if (url!.path.contains('/cas/login') &&
-                  username.isNotEmpty &&
-                  password.isNotEmpty) {
-                await webViewController?.evaluateJavascript(
-                    source:
-                        'javascript:fm1.username.value="$username";fm1.password.value="$password";fm1.passbutton.click()');
+              if (url!.path.contains('/cas/login')) {
+                // 登录页面
+                // 自动登录
+                final SharedPreferences prefs =
+                    await SharedPreferences.getInstance();
+                if (prefs.getString('username') != null &&
+                    prefs.getString('password') != null) {
+                  // 有登录信息且未触发重试
+                  if (retry == false) {
+                    await controller.evaluateJavascript(
+                        source:
+                            'javascript:fm1.username.value="${prefs.getString('username')}";fm1.password.value="${prefs.getString('password')}";fm1.passbutton.click()');
+                    retry = true;
+                  }
+                }
               }
             },
           ),

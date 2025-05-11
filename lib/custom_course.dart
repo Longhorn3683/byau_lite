@@ -59,8 +59,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
               title: const Text(
                 '导出教程',
               ),
-              onTap: () => launchInBrowser(
-                  'https://longhorn3683.github.io/2025/04/26/%E5%85%AB%E4%B8%80%E5%86%9C%E5%A4%A7%E8%AF%BE%E7%A8%8B%E8%A1%A8%E6%8F%90%E5%8F%96/'),
+              onTap: () => launchInBrowser('https://pd.qq.com/s/bbjc2guo9?b=2'),
             ),
           ),
           const SliverToBoxAdapter(
@@ -143,7 +142,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
         builder: (context) {
           return AlertDialog(
               content: SizedBox(
-                width: double.maxFinite,
+                width: 200,
                 child: ListView(
                   shrinkWrap: true,
                   children: [
@@ -158,7 +157,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
                           labelText: "课程名称（<br>换行）",
                           border: OutlineInputBorder()),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     DropdownMenu<String>(
                       initialSelection: '$week',
                       enabled: edit,
@@ -175,7 +174,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
                         week = int.parse(value!);
                       },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     DropdownMenu<String>(
                       initialSelection: '$time',
                       enabled: edit,
@@ -190,7 +189,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
                         time = int.parse(value!);
                       },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     TextField(
                       autofocus: false,
                       controller: courseColorEdit,
