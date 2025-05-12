@@ -61,24 +61,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
   CookieManager cookieManager = CookieManager.instance();
 
-  bool webVPN = false;
-
   @override
   void initState() {
     cookieManager.deleteAllCookies(); // 清除Cookies
     initApp();
     super.initState();
-    WidgetsBinding widgetsBinding = WidgetsBinding.instance;
-    widgetsBinding.addPostFrameCallback((callback) {
-      if (Platform.isAndroid || Platform.isIOS) {
-        initializeQuickActions();
-      }
-    });
   }
 
+  String version = '2.1.0';
   final usernameEdit = TextEditingController();
   final passwordEdit = TextEditingController();
+
   bool retry = false;
+  bool qaLock1 = false;
+  bool qaLock2 = false;
+  bool webVPN = false;
 
   @override
   dispose() {
@@ -89,13 +86,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   initApp() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('first_run') == null) {
+    if (prefs.getString('version') != version) {
       await showFirstRunDialog();
+    }
+    if (prefs.getBool('first_run') == null) {
       await showAutoLoginDialog();
     }
   }
 
   showFirstRunDialog() async {
+    const QuickActions().clearShortcutItems;
     await showDialog(
         context: context,
         barrierDismissible: false,
@@ -109,7 +109,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: ListView(
                       shrinkWrap: true,
                       children: [
-                        const Text('免责声明：本应用由开发者独立开发，与学校无关。若有侵权内容，请及时联系开发者删除。'),
+                        const Text('免责声明：本应用由开发者独立开发，与学校无关。若有侵权内容，请联系开发者删除。'),
                         const SizedBox(height: 4),
                         ListTile(
                           leading: const Icon(Icons.privacy_tip),
@@ -173,7 +173,19 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: () async {
                         final SharedPreferences prefs =
                             await SharedPreferences.getInstance();
-                        prefs.setBool("first_run", true);
+                        prefs.setString("version", version);
+
+                        // 设置快捷菜单
+                        const QuickActions().setShortcutItems(<ShortcutItem>[
+                          const ShortcutItem(
+                              type: 'code',
+                              localizedTitle: '虚拟校园卡',
+                              icon: 'qa_code'),
+                          const ShortcutItem(
+                              type: 'calendar',
+                              localizedTitle: '校历',
+                              icon: 'qa_calendar'),
+                        ]);
 
                         Navigator.pop(context);
                       },
@@ -205,7 +217,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
-                      Text('随时可在首页右上角“设置”中修改。'),
+                      const Text('随时可在首页右上角“设置”中修改。'),
                       const SizedBox(height: 8),
                       TextField(
                         autofocus: true,
@@ -266,6 +278,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ]);
                             });
                       } else {
+                        prefs.setBool("first_run", false);
                         prefs.setString('username', usernameEdit.text);
                         prefs.setString('password', passwordEdit.text);
 
@@ -320,32 +333,6 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  initializeQuickActions() async {
-    const QuickActions quickActions = QuickActions();
-
-    quickActions.setShortcutItems(<ShortcutItem>[
-      const ShortcutItem(
-          type: 'code', localizedTitle: '虚拟校园卡', icon: 'qa_code'),
-      const ShortcutItem(
-          type: 'score', localizedTitle: '成绩查询', icon: 'qa_score'),
-      const ShortcutItem(
-          type: 'calendar', localizedTitle: '校历', icon: 'qa_calendar'),
-    ]);
-
-    await quickActions.initialize((String shortcutType) {
-      switch (shortcutType) {
-        case 'code':
-          showQrCode(false);
-
-        case 'score':
-          openInquireScore();
-
-        case 'calendar':
-          openCalendar();
-      }
-    });
-  }
-
   getBackground() async {
     Directory? document = await getApplicationDocumentsDirectory();
     File bgFile = File('${document.path}/background');
@@ -358,6 +345,30 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      const QuickActions().initialize((String shortcutType) {
+        switch (shortcutType) {
+          case 'code':
+            if (qaLock1 == false) {
+              showQrCode(false);
+              refreshHome();
+            }
+
+          case 'calendar':
+            if (qaLock2 == false) {
+              openCalendar();
+            }
+        }
+      });
+    });
+
+    SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarContrastEnforced: false);
+
     return Stack(fit: StackFit.expand, children: [
       FutureBuilder(
         future: getBackground(),
@@ -400,7 +411,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Theme(
                   data: ThemeData.light(),
                   child: AppBar(
-                    systemOverlayStyle: SystemUiOverlayStyle.dark,
+                    systemOverlayStyle: systemUiOverlayStyle,
                     backgroundColor: Colors.transparent,
                     actions: [
                       IconButton(
@@ -451,6 +462,7 @@ class _MyHomePageState extends State<MyHomePage> {
             // 手机
             return Scaffold(
               extendBodyBehindAppBar: true,
+              extendBody: true,
               resizeToAvoidBottomInset: false,
               backgroundColor: Colors.transparent,
               appBar: PreferredSize(
@@ -458,7 +470,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Theme(
                   data: ThemeData.light(),
                   child: AppBar(
-                    systemOverlayStyle: SystemUiOverlayStyle.dark,
+                    systemOverlayStyle: systemUiOverlayStyle,
                     backgroundColor: Colors.transparent,
                     actions: [
                       IconButton(
@@ -478,8 +490,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   SizedBox(
                     height: MediaQuery.of(context).padding.top + 4,
                   ),
-                  Expanded(child: courseWebView()),
-                  SizedBox(height: 200, child: todayWebView()),
+                  Expanded(flex: 2, child: courseWebView()),
+                  Expanded(flex: 1, child: todayWebView()),
                 ],
               ),
               floatingActionButton: FloatingActionButton(
@@ -502,7 +514,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Theme(
                   data: ThemeData.light(),
                   child: AppBar(
-                    systemOverlayStyle: SystemUiOverlayStyle.dark,
+                    systemOverlayStyle: systemUiOverlayStyle,
                     backgroundColor: Colors.transparent,
                     actions: [
                       IconButton(
@@ -721,7 +733,7 @@ class _MyHomePageState extends State<MyHomePage> {
           title:
               Text("极速农大", style: Theme.of(context).textTheme.headlineMedium),
           subtitle: GestureDetector(
-            child: const Text('版本 2.1.0'),
+            child: Text('版本 $version'),
             onDoubleTap: () => showDialog(
                 context: context,
                 barrierDismissible: true,
@@ -1100,18 +1112,21 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   refreshHome() {
+    retry = false;
     courseWebViewController?.loadUrl(
         urlRequest: URLRequest(
             url: WebUri(
                 'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html')));
   }
 
-  void showQrCode(bool value) {
+  void showQrCode(bool value) async {
+    qaLock1 = true;
+
     String initialUrl = value
         ? 'https://qrcode.byau.edu.cn/_web/_customizes/byau/lightapp/erweima/mobile/index.jsp'
         : '';
     bool refresh = false;
-    showModalBottomSheet(
+    await showModalBottomSheet(
         context: context,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
@@ -1139,8 +1154,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     retry = true;
                   }
                 }
-              } else {
-                // 修复二维码无法显示
+              } else if (Platform.isIOS) {
+                // 修复iOS端二维码无法显示
                 await controller.evaluateJavascript(source: '''
                   let meta = document.createElement('meta');
                   meta.httpEquiv = "Content-Security-Policy";
@@ -1157,6 +1172,7 @@ class _MyHomePageState extends State<MyHomePage> {
             },
           );
         });
+    qaLock1 = false;
   }
 
   openInquireScore() async {
@@ -1170,14 +1186,16 @@ class _MyHomePageState extends State<MyHomePage> {
                 )));
   }
 
-  openCalendar() {
-    Navigator.push(
+  openCalendar() async {
+    qaLock2 = true;
+    await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => const WebViewPage(
                   title: '校历',
                   address: 'https://www.byau.edu.cn/919/list.htm',
                 )));
+    qaLock2 = false;
   }
 
   void openSettings() async {
@@ -1187,7 +1205,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     getUsername() {
-      if (prefs.getString('username') == null ||
+      if (prefs.getString('username') != null &&
           prefs.getString('username') != '') {
         return prefs.getString('username');
       } else {
@@ -1316,10 +1334,20 @@ class _MyHomePageState extends State<MyHomePage> {
                       });
                 },
               ),
-              const ListTile(
-                leading: Icon(Icons.info),
-                title: Text("关于"),
-                subtitle: Text("整合常用功能的八一农大第三方app"),
+              ListTile(
+                leading: const Icon(Icons.info),
+                title: const Text("关于"),
+                subtitle: Text("版本 $version"),
+                onTap: () => showAboutDialog(
+                    context: context,
+                    applicationIcon: Image.asset(
+                      'assets/splash.png',
+                      width: 50,
+                      height: 50,
+                    ),
+                    applicationVersion: '版本 $version',
+                    applicationLegalese:
+                        '整合常用功能的八一农大第三方app\n免责声明：本应用由开发者独立开发，与学校无关。若有侵权内容，请联系开发者删除。'),
               ),
             ],
           );
