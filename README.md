@@ -19,26 +19,4 @@
 
 5. 内含开发者经验分享和“某科学的超哥发明”
 
-## 如何下载
-### 下载链接
-[GitHub Releases](https://github.com/Longhorn3683/byau_lite/releases/latest)｜[123云盘](https://www.123912.com/s/1pxFjv-4nUch)
-
-### 安卓（Android）
-> 最低支持Android 8.0（API 26）
-
-1. 下载apk文件
-2. 打开文件，安装
-
-### iOS
-> 最低支持iOS 12，目前仅支持侧载安装
-
-1. 下载ipa文件
-2. 使用侧载工具安装（如Sideloadly）
-
-### 原生鸿蒙（HarmonyOS NEXT/5.0）
-> 由于应用性质的问题，本app无法以邀请测试的形式上架，因此需侧载安装![](https://raw.githubusercontent.com/Longhorn3683/byau_lite/refs/heads/main/appgallery.png)
-
-1. 下载zip文件并解压
-2. 使用侧载工具安装（[安装教程](https://xiaoyi.vc/harmonyos-next-auto-installer.html)）
-
 ## app内还有彩蛋哦～

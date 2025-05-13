@@ -98,8 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var result = await Dio()
         .get('https://gitee.com/Longhorn3683/byau_lite/raw/main/version');
     if (result.statusCode == 200) {
-      // 比较版本号
-      if (version != result) {
+      if (version != result.toString()) {
         showDialog(
             context: context,
             builder: (context) {
