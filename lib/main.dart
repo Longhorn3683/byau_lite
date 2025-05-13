@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:byau/course.dart';
 import 'package:byau/custom_course.dart';
 import 'package:byau/launch_in_browser.dart';
+import 'package:byau/wakeup.dart';
 import 'package:byau/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_file_saver/flutter_file_saver.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:image_picker/image_picker.dart';
@@ -68,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.1.0';
+  String version = '2.5.0';
   final usernameEdit = TextEditingController();
   final passwordEdit = TextEditingController();
 
@@ -1263,11 +1265,10 @@ class _MyHomePageState extends State<MyHomePage> {
               ListTile(
                 leading: const Icon(Icons.upload),
                 title: const Text(
-                  '导出课表',
+                  '导入WakeUp课程表',
                 ),
-                subtitle: const Text('可导入WakeUp课程表，支持课程提醒'),
-                onTap: () =>
-                    launchInBrowser('https://pd.qq.com/s/bbjc2guo9?b=2'),
+                subtitle: const Text('支持上课提醒、自定义课表'),
+                onTap: () => importWakeUp(context),
               ),
               ListTile(
                 leading: const Icon(Icons.view_agenda),
@@ -1353,4 +1354,101 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         });
   }
+}
+
+void importWakeUp(BuildContext context) {
+  showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+            content: SizedBox(
+              width: 300,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  const Text('WakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。'),
+                  ListTile(
+                      leading: const Icon(Icons.apps),
+                      title: const Text('下载app'),
+                      subtitle: const Text('WakeUp课程表'),
+                      onTap: () => launchInBrowser('https://wakeup.fun/')),
+                  ListTile(
+                      leading: const Icon(Icons.file_present),
+                      title: const Text('保存课表模板'),
+                      onTap: () async {
+                        String template = await rootBundle.loadString(
+                            'assets/wakeup_template.wakeup_schedule');
+                        FlutterFileSaver().writeFileAsString(
+                          fileName: '课表模板.wakeup_schedule',
+                          data: template,
+                        );
+                      }),
+                  ListTile(
+                    leading: const Icon(Icons.upload),
+                    title: const Text('导出课表'),
+                    onTap: () => showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                              title: const Text('导出课表'),
+                              content: SizedBox(
+                                width: 300,
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  children: const [
+                                    Text('将前往课表查询页面，请选择当前的网络环境。'),
+                                  ],
+                                ),
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('取消'),
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                TextButton(
+                                  child: const Text('非校园网'),
+                                  onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const WakeUpPage(
+                                                address:
+                                                    'https://http-10-1-4-41-80.webvpn.byau.edu.cn/jsxsd/kbcx/kbxx_xzb',
+                                                webVPN: false,
+                                              ))),
+                                ),
+                                TextButton(
+                                  child: const Text('校园网'),
+                                  onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const WakeUpPage(
+                                                address:
+                                                    'http://10.1.4.41/jsxsd/kbcx/kbxx_xzb',
+                                                webVPN: true,
+                                              ))),
+                                ),
+                              ]);
+                        }),
+                  ),
+                  const ListTile(
+                    leading: Icon(Icons.folder),
+                    title: Text('导入模板和课表'),
+                    subtitle: Text('模板选择“从备份导入”，课表选择“从CSV”'),
+                  ),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('确定'),
+                onPressed: () async {
+                  Navigator.pop(context);
+                },
+              ),
+            ]);
+      });
 }

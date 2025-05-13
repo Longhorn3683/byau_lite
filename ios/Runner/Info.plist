@@ -74,5 +74,11 @@
 	</array>
 	<key>UIStatusBarHidden</key>
 	<false/>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

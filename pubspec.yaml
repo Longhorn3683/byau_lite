@@ -60,6 +60,7 @@ dependencies:
     git:
       url: "https://gitcode.com/openharmony-sig/fluttertpc_flutter_native_splash.git"
       path: ""
+  flutter_file_saver: ^0.9.0
 
 dev_dependencies:
   flutter_test:

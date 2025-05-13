@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:byau/course.dart';
-import 'package:byau/launch_in_browser.dart';
+import 'package:byau/main.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -48,7 +48,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
                 color: Colors.orange,
               ),
               title: Text(
-                '不再建议使用此功能，建议导出课表并导入WakeUp课程表。\nWakeUp课程表可接入小布建议、YOYO建议，可导入系统日程，支持自定义课表、小组件、上课提醒等功能。',
+                '不再建议使用此功能，建议导出课表并导入WakeUp课程表。',
                 style: TextStyle(color: Colors.orange),
               ),
             ),
@@ -57,9 +57,10 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
             child: ListTile(
               leading: const Icon(Icons.upload),
               title: const Text(
-                '导出教程',
+                '导入WakeUp课程表',
               ),
-              onTap: () => launchInBrowser('https://pd.qq.com/s/bbjc2guo9?b=2'),
+              subtitle: const Text('支持上课提醒、自定义课表'),
+              onTap: () => importWakeUp(context),
             ),
           ),
           const SliverToBoxAdapter(

@@ -99,8 +99,8 @@ class _WebViewPageState extends State<WebViewPage> {
                 children: [
                   InAppWebView(
                     initialUrlRequest: URLRequest(url: WebUri(widget.address)),
-                    initialSettings:
-                        InAppWebViewSettings(useHybridComposition: false),
+                    initialSettings: InAppWebViewSettings(
+                        useHybridComposition: false, useOnDownloadStart: true),
                     onWebViewCreated: (controller) {
                       webViewController = controller;
                     },
@@ -116,6 +116,9 @@ class _WebViewPageState extends State<WebViewPage> {
                       });
                     },
                     onLoadStop: (controller, url) async {
+                      setState(() {
+                        initialUrl = url.toString();
+                      });
                       if (url!.path.contains('/cas/login')) {
                         // 登录页面
                         // 自动登录
@@ -132,6 +135,48 @@ class _WebViewPageState extends State<WebViewPage> {
                           }
                         }
                       }
+                    },
+                    onDownloadStartRequest:
+                        (controller, downloadStartRequest) async {
+                      showDialog(
+                          context: context,
+                          barrierDismissible: true,
+                          builder: (context) {
+                            return AlertDialog(
+                                title: const Text('下载文件'),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  child: ListView(
+                                    shrinkWrap: true,
+                                    children: [
+                                      Text(downloadStartRequest.url.toString())
+                                    ],
+                                  ),
+                                ),
+                                actions: <Widget>[
+                                  TextButton(
+                                    child: const Text('取消'),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  TextButton(
+                                    child: const Text('复制链接'),
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(
+                                          text: downloadStartRequest.url
+                                              .toString()));
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  TextButton(
+                                    child: const Text('在浏览器打开'),
+                                    onPressed: () {
+                                      launchInBrowser(initialUrl);
+                                    },
+                                  ),
+                                ]);
+                          });
                     },
                   ),
                   progress < 1.0
