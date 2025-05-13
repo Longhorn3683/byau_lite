@@ -21,7 +21,7 @@
 
 ## 如何下载
 ### 下载链接
-[GitHub Releases](https://github.com/Longhorn3683/byau_lite/releases/latest)｜[蓝奏云（密码:2k7t）](https://longhorn3683.lanzoue.com/b0xw8cgah)
+[GitHub Releases](https://github.com/Longhorn3683/byau_lite/releases/latest)｜[123云盘](https://www.123912.com/s/1pxFjv-4nUch)
 
 ### 安卓（Android）
 > 最低支持Android 8.0（API 26）
@@ -33,7 +33,7 @@
 > 最低支持iOS 12，目前仅支持侧载安装
 
 1. 下载ipa文件
-2. 使用侧载工具安装（Sideloadly之类的都可以）（[安装教程](https://longhorn3683.github.io/2025/03/14/iOS%E5%AE%89%E8%A3%85%E6%9C%AA%E7%AD%BE%E5%90%8Dipa%E5%BA%94%E7%94%A8/)）
+2. 使用侧载工具安装（如Sideloadly）
 
 ### 原生鸿蒙（HarmonyOS NEXT/5.0）
 > 由于应用性质的问题，本app无法以邀请测试的形式上架，因此需侧载安装![](https://raw.githubusercontent.com/Longhorn3683/byau_lite/refs/heads/main/appgallery.png)

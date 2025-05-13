@@ -71,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.5.0';
+  String version = '2.5.1';
   final usernameEdit = TextEditingController();
   final passwordEdit = TextEditingController();
 
@@ -98,10 +98,36 @@ class _MyHomePageState extends State<MyHomePage> {
     var result = await Dio()
         .get('https://gitee.com/Longhorn3683/byau_lite/raw/main/version');
     if (result.statusCode == 200) {
-      print(result);
       // 比较版本号
       if (version != result) {
-        print('object');
+        showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                  title: const Text('新版本已发布'),
+                  content: SizedBox(
+                    width: 300,
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        Text('当前版本为 $version 。版本 $result 已发布，建议更新。'),
+                      ],
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      child: const Text('取消'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    TextButton(
+                      child: const Text('更新'),
+                      onPressed: () => launchInBrowser(
+                          'https://www.123912.com/s/1pxFjv-4nUch'),
+                    ),
+                  ]);
+            });
       }
     }
   }
