@@ -6,6 +6,7 @@ import 'package:byau/custom_course.dart';
 import 'package:byau/launch_in_browser.dart';
 import 'package:byau/wakeup.dart';
 import 'package:byau/webview.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -93,6 +94,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     if (prefs.getBool('first_run') == null) {
       await showAutoLoginDialog();
+    }
+    var result = await Dio()
+        .get('https://gitee.com/Longhorn3683/byau_lite/raw/main/version');
+    if (result.statusCode == 200) {
+      print(result);
+      // 比较版本号
+      if (version != result) {
+        print('object');
+      }
     }
   }
 
@@ -319,8 +329,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   actions: <Widget>[
                     TextButton(
                       child: const Text('导出教程'),
-                      onPressed: () =>
-                          launchInBrowser('https://pd.qq.com/s/bbjc2guo9?b=2'),
+                      onPressed: () => importWakeUp(context),
                     ),
                     TextButton(
                       child: const Text('确定'),
