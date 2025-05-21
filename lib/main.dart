@@ -60,8 +60,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   InAppWebViewSettings settings = InAppWebViewSettings(
       transparentBackground: true,
+      useHybridComposition: false,
       mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW);
-
   CookieManager cookieManager = CookieManager.instance();
 
   @override
@@ -71,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.5.1';
+  String version = '2.5.2';
   final usernameEdit = TextEditingController();
   final passwordEdit = TextEditingController();
 
@@ -347,23 +347,29 @@ class _MyHomePageState extends State<MyHomePage> {
                       shrinkWrap: true,
                       children: const [
                         Text(
-                            '现已发布导出课表教程，支持导入WakeUp课程表。\nWakeUp课程表可接入小布建议、YOYO建议，可导入系统日程，支持自定义课表、小组件、上课提醒等功能。'),
+                            '极速农大现已支持导出课表功能，可导入WakeUp课程表。\nWakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。'),
                       ],
                     ),
                   ),
                   actions: <Widget>[
                     TextButton(
-                      child: const Text('导出教程'),
-                      onPressed: () => importWakeUp(context),
-                    ),
-                    TextButton(
-                      child: const Text('确定'),
+                      child: const Text('不再提醒'),
                       onPressed: () async {
                         final SharedPreferences prefs =
                             await SharedPreferences.getInstance();
                         prefs.setBool("wakeup", true);
                         Navigator.pop(context);
                       },
+                    ),
+                    TextButton(
+                      child: const Text('以后再说'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    TextButton(
+                      child: const Text('这就去导出😆'),
+                      onPressed: () => importWakeUp(context),
                     ),
                   ]));
         });
@@ -527,6 +533,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     height: MediaQuery.of(context).padding.top + 4,
                   ),
                   Expanded(flex: 2, child: courseWebView()),
+                  Divider(
+                    height: 0,
+                  ),
                   Expanded(flex: 1, child: todayWebView()),
                 ],
               ),
@@ -1256,10 +1265,6 @@ class _MyHomePageState extends State<MyHomePage> {
           return ListView(
             shrinkWrap: true,
             children: [
-              AppBar(
-                backgroundColor: Colors.transparent,
-                title: const Text("设置"),
-              ),
               ListTile(
                 leading: const Icon(Icons.account_circle),
                 title: Text(
@@ -1271,7 +1276,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ListTile(
                 leading: const Icon(Icons.image),
                 title: const Text("更换背景"),
-                subtitle: const Text('支持GIF动图，按住以删除背景'),
+                subtitle: const Text('支持GIF动图，按住以恢复默认'),
                 onTap: () async {
                   final ImagePicker picker = ImagePicker();
                   final XFile? image =
@@ -1299,14 +1304,15 @@ class _MyHomePageState extends State<MyHomePage> {
               ListTile(
                 leading: const Icon(Icons.upload),
                 title: const Text(
-                  '导入WakeUp课程表',
+                  '导出课表',
                 ),
-                subtitle: const Text('支持上课提醒、自定义课表'),
+                subtitle: const Text('可导入WakeUp课程表，支持上课提醒、自定义课表'),
                 onTap: () => importWakeUp(context),
               ),
               ListTile(
                 leading: const Icon(Icons.view_agenda),
                 title: const Text('自定义课程'),
+                subtitle: const Text('已停止维护，不再建议使用此功能'),
                 onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1400,15 +1406,17 @@ void importWakeUp(BuildContext context) {
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  const Text('WakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。'),
+                  const Text(
+                      'WakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。\n若教务系统课表发生变化（如调课），需清空WakeUp课程表中的课程，删除已导入日程，并重新进行第三步和第四步。\n\n以下为导出课表步骤：'),
                   ListTile(
-                      leading: const Icon(Icons.apps),
-                      title: const Text('下载app'),
-                      subtitle: const Text('WakeUp课程表'),
+                      leading: const Icon(Icons.download),
+                      title: const Text('第一步'),
+                      subtitle: Text('下载WakeUp课程表'),
                       onTap: () => launchInBrowser('https://wakeup.fun/')),
                   ListTile(
                       leading: const Icon(Icons.file_present),
-                      title: const Text('保存课表模板'),
+                      title: const Text('第二步'),
+                      subtitle: Text('保存课表模板'),
                       onTap: () async {
                         String template = await rootBundle.loadString(
                             'assets/wakeup_template.wakeup_schedule');
@@ -1418,8 +1426,9 @@ void importWakeUp(BuildContext context) {
                         );
                       }),
                   ListTile(
-                    leading: const Icon(Icons.upload),
-                    title: const Text('导出课表'),
+                    leading: const Icon(Icons.web),
+                    title: const Text('第三步'),
+                    subtitle: const Text('从教务系统导出课表'),
                     onTap: () => showDialog(
                         context: context,
                         builder: (context) {
@@ -1430,7 +1439,7 @@ void importWakeUp(BuildContext context) {
                                 child: ListView(
                                   shrinkWrap: true,
                                   children: const [
-                                    Text('将前往课表查询页面，请选择当前的网络环境。'),
+                                    Text('将前往课表查询页面并自动导出课表。\n请选择当前的网络环境：'),
                                   ],
                                 ),
                               ),
@@ -1468,10 +1477,12 @@ void importWakeUp(BuildContext context) {
                               ]);
                         }),
                   ),
-                  const ListTile(
-                    leading: Icon(Icons.folder),
-                    title: Text('导入模板和课表'),
-                    subtitle: Text('模板选择“从备份导入”，课表选择“从CSV”'),
+                  ListTile(
+                    leading: Icon(Icons.article),
+                    title: Text('第四步'),
+                    subtitle: Text('按照导入教程导入WakeUp课程表和系统日程'),
+                    onTap: () =>
+                        launchInBrowser('https://pd.qq.com/s/bj7h2i1t5'),
                   ),
                 ],
               ),

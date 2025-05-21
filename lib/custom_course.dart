@@ -48,7 +48,7 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
                 color: Colors.orange,
               ),
               title: Text(
-                '不再建议使用此功能，建议导出课表并导入WakeUp课程表。',
+                '此功能已停止维护，不再建议使用此功能。\n建议使用“导出课表”功能并导入WakeUp课程表。',
                 style: TextStyle(color: Colors.orange),
               ),
             ),
@@ -57,9 +57,9 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
             child: ListTile(
               leading: const Icon(Icons.upload),
               title: const Text(
-                '导入WakeUp课程表',
+                '导出课表',
               ),
-              subtitle: const Text('支持上课提醒、自定义课表'),
+              subtitle: const Text('可导入WakeUp课程表，支持上课提醒'),
               onTap: () => importWakeUp(context),
             ),
           ),
