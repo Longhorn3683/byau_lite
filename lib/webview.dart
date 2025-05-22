@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:byau/course.dart';
 import 'package:byau/launch_in_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WebViewPage extends StatefulWidget {
@@ -134,6 +139,57 @@ class _WebViewPageState extends State<WebViewPage> {
                             retry = true;
                           }
                         }
+                      } else if (url.path.contains(
+                          '_web/_lightapp/schedule/mobile/student/index.html')) {
+                        Directory? document =
+                            await getApplicationDocumentsDirectory();
+
+                        // 课程表
+                        String customCourse() {
+                          Directory custom =
+                              Directory('${document.path}/custom/');
+                          if (custom.existsSync()) {
+                            String script = '';
+                            custom.listSync().forEach((e) {
+                              File file = File(e.path);
+                              String albumJson = file.readAsStringSync();
+                              final jsonMap = json.decode(albumJson);
+                              Course course = Course.fromJson(jsonMap);
+                              getColor() {
+                                return 'style="height: 96px;background-color: ${course.color}"';
+                              }
+
+                              String cell = '${course.week + course.time * 7}'
+                                  .padLeft(2, '0');
+
+                              script =
+                                  """${script}array[$cell].innerHTML = '<div style="width: 100%;position: relative"><div class="contect-show clickc" ${getColor()}>${course.name}</div></div>';""";
+                            });
+                            return script;
+                          } else {
+                            return '';
+                          }
+                        }
+
+                        await webViewController?.evaluateJavascript(source: """
+                                // 自定义课表
+                                var oldXHR = window.XMLHttpRequest;
+                                function newXHR() {
+                                    var realXHR = new oldXHR();
+                                    realXHR.addEventListener('readystatechange', function() {
+                                        if (realXHR.readyState == 4) {
+                                            setTimeout(() => {
+                                              custom(document.getElementsByTagName("td"));
+                                              function custom(array){
+                                                 ${customCourse()}
+                                              };
+                                            }, 0);
+                                       }
+                                   }, false);
+                                    return realXHR;
+                                }
+                                window.XMLHttpRequest = newXHR;
+                            """);
                       }
                     },
                     onDownloadStartRequest:

@@ -43,31 +43,6 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
           ),
           const SliverToBoxAdapter(
             child: ListTile(
-              leading: Icon(
-                Icons.warning,
-                color: Colors.orange,
-              ),
-              title: Text(
-                '此功能已停止维护，不再建议使用此功能。\n建议使用“导出课表”功能并导入WakeUp课程表。',
-                style: TextStyle(color: Colors.orange),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: ListTile(
-              leading: const Icon(Icons.upload),
-              title: const Text(
-                '导出课表',
-              ),
-              subtitle: const Text('可导入WakeUp课程表，支持上课提醒'),
-              onTap: () => importWakeUp(context),
-            ),
-          ),
-          const SliverToBoxAdapter(
-            child: Divider(),
-          ),
-          const SliverToBoxAdapter(
-            child: ListTile(
               title: Text('添加的课程不支持点击查看课程信息，且会覆盖对应开始时间的课程。\n暂不支持添加到时间线。'),
             ),
           ),

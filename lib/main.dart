@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:byau/course.dart';
 import 'package:byau/custom_course.dart';
+import 'package:byau/get_dark_bool.dart';
 import 'package:byau/launch_in_browser.dart';
 import 'package:byau/wakeup.dart';
 import 'package:byau/webview.dart';
@@ -61,13 +62,19 @@ class _MyHomePageState extends State<MyHomePage> {
   InAppWebViewSettings settings = InAppWebViewSettings(
       transparentBackground: true,
       useHybridComposition: false,
+      loadWithOverviewMode: true,
+      useWideViewPort: false,
+      pageZoom: 0.5,
       mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW);
+
   CookieManager cookieManager = CookieManager.instance();
+  bool newUI = true;
 
   @override
   void initState() {
     cookieManager.deleteAllCookies(); // 清除Cookies
     initApp();
+
     super.initState();
   }
 
@@ -95,6 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (prefs.getBool('first_run') == null) {
       await showAutoLoginDialog();
     }
+
     var result = await Dio()
         .get('https://gitee.com/Longhorn3683/byau_lite/raw/main/version');
     if (result.statusCode == 200) {
@@ -404,11 +412,13 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     });
 
-    SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
+    SystemUiOverlayStyle systemUiOverlayStyle = SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness:
+            isDarkMode(context) ? Brightness.light : Brightness.dark,
         systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarIconBrightness:
+            isDarkMode(context) ? Brightness.light : Brightness.dark,
         systemNavigationBarContrastEnforced: false);
 
     return Stack(fit: StackFit.expand, children: [
@@ -419,26 +429,33 @@ class _MyHomePageState extends State<MyHomePage> {
             if (snapshot.hasError) {
               // 请求失败，显示错误
               return Container(
-                  color: ThemeData.light().scaffoldBackgroundColor);
+                  color: Theme.of(context).scaffoldBackgroundColor);
             } else {
               // 请求成功，显示数据
               if (snapshot.data == 114514) {
                 return Container(
-                    color: ThemeData.light().scaffoldBackgroundColor);
+                    color: Theme.of(context).scaffoldBackgroundColor);
               } else {
-                return Image.file(
-                  snapshot.data,
-                  fit: BoxFit.cover,
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      snapshot.data,
+                      fit: BoxFit.cover,
+                    ),
+                    Container(
+                      color: isDarkMode(context)
+                          ? Color.fromRGBO(0, 0, 0, 0.8)
+                          : Color.fromRGBO(255, 255, 255, 0.8),
+                    )
+                  ],
                 );
               }
             }
           } else {
-            return Container(color: ThemeData.light().scaffoldBackgroundColor);
+            return Container(color: Theme.of(context).scaffoldBackgroundColor);
           }
         },
-      ),
-      Container(
-        color: Colors.white70,
       ),
       LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
@@ -502,52 +519,162 @@ class _MyHomePageState extends State<MyHomePage> {
             );
           } else if (constraints.maxHeight > 500) {
             // 手机
-            return Scaffold(
-              extendBodyBehindAppBar: true,
-              extendBody: true,
-              resizeToAvoidBottomInset: false,
-              backgroundColor: Colors.transparent,
-              appBar: PreferredSize(
-                preferredSize: const Size(double.infinity, kToolbarHeight),
-                child: Theme(
-                  data: ThemeData.light(),
-                  child: AppBar(
-                    systemOverlayStyle: systemUiOverlayStyle,
-                    backgroundColor: Colors.transparent,
-                    actions: [
-                      IconButton(
-                          icon: const Icon(Icons.refresh),
-                          tooltip: '刷新',
-                          onPressed: () => refreshHome()),
-                      IconButton(
-                          icon: const Icon(Icons.settings),
-                          tooltip: '设置',
-                          onPressed: () => openSettings()),
+            if (newUI == true) {
+              String greet() {
+                int hour = DateTime.now().hour;
+                if (hour < 11) {
+                  return '早上好';
+                } else if (hour < 13) {
+                  return '中午好';
+                } else if (hour < 19) {
+                  return '下午好';
+                } else {
+                  return '晚上好';
+                }
+              }
+
+              return Scaffold(
+                resizeToAvoidBottomInset: false,
+                backgroundColor: Colors.transparent,
+                body: RefreshIndicator(
+                  onRefresh: () async {
+                    await refreshHome();
+                    return; // 刷新完成
+                  },
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverAppBar(
+                        systemOverlayStyle: systemUiOverlayStyle,
+                        backgroundColor: Colors.transparent,
+                        actions: [
+                          IconButton(
+                              icon: const Icon(Icons.settings),
+                              tooltip: '设置',
+                              onPressed: () => openSettings()),
+                        ],
+                      ),
+                      SliverToBoxAdapter(
+                        child: ListTile(
+                          title: Text(
+                            greet(),
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                          child: Opacity(
+                        opacity: 0.8,
+                        child: Card(
+                          margin:
+                              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                title: Text('本周课表'),
+                                trailing: Icon(Icons.view_agenda),
+                                onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => const WebViewPage(
+                                            title: '本周课表',
+                                            address:
+                                                'https://light.byau.edu.cn/_web/_lightapp/schedule/mobile/student/index.html'))),
+                              ),
+                              AspectRatio(
+                                aspectRatio: 8 / 9,
+                                child: courseWebView(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )),
+                      SliverToBoxAdapter(
+                          child: Opacity(
+                        opacity: 0.8,
+                        child: Card(
+                            margin: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  title: Text('今日课表'),
+                                  trailing: Icon(Icons.schedule),
+                                  onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => const WebViewPage(
+                                              title: '今日课表',
+                                              address:
+                                                  'https://light.byau.edu.cn/_web/_customizes/byau/_lightapp/studentSchedul/card3.html'))),
+                                ),
+                                AspectRatio(
+                                  aspectRatio: 3 / 2,
+                                  child: todayWebView(),
+                                ),
+                              ],
+                            )),
+                      )),
+                      SliverPadding(
+                          padding: EdgeInsets.only(
+                              bottom: kFloatingActionButtonMargin * 2 +
+                                  kBottomNavigationBarHeight))
                     ],
                   ),
                 ),
-              ),
-              body: Column(
-                children: [
-                  SizedBox(
-                    height: MediaQuery.of(context).padding.top + 4,
-                  ),
-                  Expanded(flex: 2, child: courseWebView()),
-                  Divider(
-                    height: 0,
-                  ),
-                  Expanded(flex: 1, child: todayWebView()),
-                ],
-              ),
-              floatingActionButton: FloatingActionButton(
-                tooltip: '虚拟校园卡',
-                onPressed: () {
-                  showQrCode(true);
-                },
-                child: const Icon(Icons.qr_code),
-              ),
-              drawer: drawer(),
-            );
+                floatingActionButton: FloatingActionButton(
+                  tooltip: '虚拟校园卡',
+                  onPressed: () {
+                    showQrCode(true);
+                  },
+                  child: const Icon(Icons.qr_code),
+                ),
+                drawer: drawer(),
+              );
+            } else {
+              return Scaffold(
+                extendBodyBehindAppBar: true,
+                extendBody: true,
+                backgroundColor: Colors.transparent,
+                resizeToAvoidBottomInset: false,
+                appBar: AppBar(
+                  systemOverlayStyle: systemUiOverlayStyle,
+                  backgroundColor: Colors.transparent,
+                  actions: [
+                    IconButton(
+                        icon: const Icon(Icons.refresh),
+                        tooltip: '刷新',
+                        onPressed: () => refreshHome()),
+                    IconButton(
+                        icon: const Icon(Icons.settings),
+                        tooltip: '设置',
+                        onPressed: () => openSettings()),
+                  ],
+                ),
+                body: Column(
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).padding.top + 4,
+                    ),
+                    Expanded(flex: 2, child: courseWebView()),
+                    Divider(
+                      height: 0,
+                    ),
+                    Expanded(flex: 1, child: todayWebView()),
+                  ],
+                ),
+                floatingActionButton: FloatingActionButton(
+                  tooltip: '虚拟校园卡',
+                  onPressed: () {
+                    showQrCode(true);
+                  },
+                  child: const Icon(Icons.qr_code),
+                ),
+                drawer: drawer(),
+              );
+            }
           } else {
             // 小折叠外屏？
             return Scaffold(
@@ -599,7 +726,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget courseWebView() {
     return InAppWebView(
-      initialSettings: settings,
+      initialSettings: InAppWebViewSettings(
+        transparentBackground: true,
+        useHybridComposition: false,
+        loadWithOverviewMode: true,
+        useWideViewPort: false,
+        pageZoom: 0.5,
+        initialScale: newUI ? 180 : 0,
+      ),
       initialUrlRequest: URLRequest(
           url: WebUri(
               'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html')),
@@ -650,7 +784,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 final jsonMap = json.decode(albumJson);
                 Course course = Course.fromJson(jsonMap);
                 getColor() {
-                  if (backgroundFile.existsSync()) {
+                  if (backgroundFile.existsSync() && newUI != true) {
                     return 'style="height: 96px;background-color: rgb(255, 255, 255, 0.5);color: #000000"';
                   } else {
                     return 'style="height: 96px;background-color: ${course.color}"';
@@ -669,26 +803,36 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           }
 
-          // 设置背景
-          String scheduleBg() {
-            if (backgroundFile.existsSync()) {
+          // 新UI隐藏顶部
+          String hideWeek() {
+            if (newUI == true) {
               return """
-                                bg(document.getElementsByTagName("div"));
-                                bg(document.getElementsByTagName("ul"));
-                                function bg(array){
-                                  for(var i=0; i<array.length; i++) {
-                                    array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
-                                  }
-                                };
+                    hideWeek = hideWeek + 1;
+                    if(hideWeek==4){
+                        week(document.getElementsByClassName("ui-week"));
+                        function week(array){
+                            for(var i=0; i<array.length; i++) {
+                                array[i].click();
+                                console.log('114514');
 
+                            }
+                        };
+                        weekBar(document.getElementsByClassName("ui-week-choice normal"));
+                        function weekBar(array){
+                            for(var i=0; i<array.length; i++) {
+                                array[i].remove();
+                            }
+                        };
+                    }
                         """;
             } else {
               return '';
             }
           }
 
+          // 设置背景
           String courseBg() {
-            if (backgroundFile.existsSync()) {
+            if (backgroundFile.existsSync() && newUI != true) {
               return """
                                                 course(document.getElementsByClassName("contect-show clickc"));
                                                 function course(array){
@@ -705,21 +849,37 @@ class _MyHomePageState extends State<MyHomePage> {
           }
 
           await courseWebViewController?.evaluateJavascript(source: """
-                                // 更改背景
-                                ${scheduleBg()}
+                                // 更改课表背景
+                                bg(document.getElementsByTagName("div"));
+                                bg(document.getElementsByTagName("ul"));
+                                function bg(array){
+                                  for(var i=0; i<array.length; i++) {
+                                    array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
+                                  }
+                                };
 
                                 // 更改各课程背景/自定义课表
+                                let hideWeek = 0;
                                 var oldXHR = window.XMLHttpRequest;
                                 function newXHR() {
                                     var realXHR = new oldXHR();
                                     realXHR.addEventListener('readystatechange', function() {
                                         if (realXHR.readyState == 4) {
                                             setTimeout(() => {
-                                                ${courseBg()}
-                                                custom(document.getElementsByTagName("td"));
-                                                function custom(array){
-                                                   ${customCourse()}
-                                                };
+                                            ul(document.getElementsByTagName("td"));
+                    ul(document.getElementsByTagName("li"));
+                    ul(document.getElementsByTagName("div"));
+                    function ul(array){
+                        for(var i=0; i<array.length; i++) {
+                            array[i].style.borderStyle="none";
+                        }
+                    };
+                                              ${hideWeek()}
+                                              ${courseBg()}
+                                              custom(document.getElementsByTagName("td"));
+                                              function custom(array){
+                                                 ${customCourse()}
+                                              };
                                             }, 0);
                                        }
                                    }, false);
@@ -743,27 +903,26 @@ class _MyHomePageState extends State<MyHomePage> {
 
         // 删除顶栏
         await agendaWebViewController?.evaluateJavascript(source: """
-                              tab(document.getElementsByClassName('m-news-title m-news-flex ui-border-b'));
-                              function tab(array){
-                                  for(var i=0; i<array.length; i++) {
-                                      array[i].remove();
-                                  }
-                              };
-                              """);
+          tab(document.getElementsByClassName('m-news-title m-news-flex ui-border-b'));
+          function tab(array){
+            for(var i=0; i<array.length; i++) {
+              array[i].remove();
+            }
+          };
+        """);
 
         // 清除背景
         File backgroundFile = File('${document.path}/background');
         if (backgroundFile.existsSync()) {
           await agendaWebViewController?.evaluateJavascript(source: """
-                                // 更改背景
-                                bg(document.getElementsByTagName("div"));
-                                bg(document.getElementsByTagName("ul"));
-                                function bg(array){
-                                    for(var i=0; i<array.length; i++) {
-                                        array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
-                                    }
-                                };
-                            """);
+            bg(document.getElementsByTagName("div"));
+            bg(document.getElementsByTagName("ul"));
+            function bg(array){
+              for(var i=0; i<array.length; i++) {
+                array[i].style.backgroundColor="rgba(255, 255, 255, 0)";
+              }
+            };
+          """);
         }
       },
     );
@@ -1156,9 +1315,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  refreshHome() {
+  refreshHome() async {
     retry = false;
-    courseWebViewController?.loadUrl(
+    await courseWebViewController?.loadUrl(
         urlRequest: URLRequest(
             url: WebUri(
                 'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html')));
@@ -1311,8 +1470,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.view_agenda),
-                title: const Text('自定义课程'),
-                subtitle: const Text('已停止维护，不再建议使用此功能'),
+                title: const Text('添加自定义课程'),
                 onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
