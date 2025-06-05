@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:byau/course.dart';
-import 'package:byau/main.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomCoursePage extends StatefulWidget {
-  const CustomCoursePage({super.key, required this.directory});
-  final Directory directory;
+  const CustomCoursePage({super.key, required this.document});
+  final Directory document;
 
   @override
   _CustomCoursePageState createState() => _CustomCoursePageState();
@@ -21,14 +21,35 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
   @override
   void initState() {
     super.initState();
+    initSp();
+  }
+
+  bool transparent = true;
+  bool divider = true;
+  bool timeline = true;
+
+  initSp() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    transparent = prefs.getBool('transparent')!;
+    divider = prefs.getBool('divider')!;
+    timeline = prefs.getBool('timeline')!;
+    setState(() {});
+  }
+
+  setSpBool(String key, bool bool) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool(key, bool);
+    setState(() {});
   }
 
   List customList() {
-    if (!widget.directory.existsSync()) {
-      widget.directory.create();
+    Directory custom = Directory('${widget.document.path}/custom/');
+
+    if (!custom.existsSync()) {
+      custom.create();
       return [];
     } else {
-      return widget.directory.listSync();
+      return custom.listSync();
     }
   }
 
@@ -38,8 +59,15 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
       body: CustomScrollView(
         shrinkWrap: true,
         slivers: [
-          const SliverAppBar(
-            title: Text("自定义课程"),
+          SliverAppBar(
+            title: const Text("自定义课程"),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () =>
+                    showCustomCourseDialog(context, true, '', 0, 0, '#114514'),
+              )
+            ],
           ),
           const SliverToBoxAdapter(
             child: ListTile(
@@ -92,15 +120,6 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
                   ),
                 );
               }),
-          SliverToBoxAdapter(
-            child: ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text('添加课程'),
-              onTap: () {
-                showCustomCourseDialog(context, true, '', 0, 0, '#114514');
-              },
-            ),
-          ),
         ],
       ),
     );
