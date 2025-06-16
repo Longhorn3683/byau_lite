@@ -42,7 +42,7 @@ class BYAUApp extends StatelessWidget {
           colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1)),
       home: const MyHomePage(),
       title: '极速农大',
-      //debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -68,11 +68,15 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.6.0';
+  String version = '2.6.1';
   String firstrunVer = '2.5.2';
 
-  bool qaLock1 = false;
-  bool qaLock2 = false;
+  bool qaLockCode = false;
+  bool qaLockScore = false;
+  bool qaLockCalendar = false;
+  bool qaLockSeat = false;
+  bool qaLockWifi = false;
+
   bool webVPN = false;
 
   @override
@@ -103,6 +107,20 @@ class _MyHomePageState extends State<MyHomePage> {
     if (prefs.getBool('first_run') == null) {
       await showAutoLoginDialog();
     }
+
+    // 设置快捷菜单
+    List<ShortcutItem> shortcutList = [
+      const ShortcutItem(
+          type: 'code', localizedTitle: '虚拟校园卡', icon: 'qa_code'),
+      const ShortcutItem(
+          type: 'score', localizedTitle: '成绩查询', icon: 'qa_score'),
+      const ShortcutItem(
+          type: 'seat', localizedTitle: '图书馆选座', icon: 'qa_seat'),
+      const ShortcutItem(
+          type: 'calendar', localizedTitle: '校历', icon: 'qa_calendar'),
+      const ShortcutItem(type: 'wifi', localizedTitle: '校园网', icon: 'qa_wifi'),
+    ];
+    const QuickActions().setShortcutItems(shortcutList);
 
     var result = await Dio()
         .get('https://gitee.com/Longhorn3683/byau_lite/raw/main/version');
@@ -220,18 +238,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         final SharedPreferences prefs =
                             await SharedPreferences.getInstance();
                         prefs.setString("version", firstrunVer);
-
-                        // 设置快捷菜单
-                        const QuickActions().setShortcutItems(<ShortcutItem>[
-                          const ShortcutItem(
-                              type: 'code',
-                              localizedTitle: '虚拟校园卡',
-                              icon: 'qa_code'),
-                          const ShortcutItem(
-                              type: 'calendar',
-                              localizedTitle: '校历',
-                              icon: 'qa_calendar'),
-                        ]);
 
                         Navigator.pop(context);
                       },
@@ -403,14 +409,30 @@ class _MyHomePageState extends State<MyHomePage> {
       const QuickActions().initialize((String shortcutType) {
         switch (shortcutType) {
           case 'code':
-            if (qaLock1 == false) {
+            if (qaLockCode == false) {
               showQrCode();
             }
 
+          case 'score':
+            if (qaLockScore == false) {
+              qaLockScore = true;
+              openInquireScore();
+            }
+
+          case 'seat':
+            if (qaLockSeat == false) {
+              qaLockSeat = true;
+              openLibrarySeat();
+            }
+
           case 'calendar':
-            if (qaLock2 == false) {
+            if (qaLockCalendar == false) {
               openCalendar();
-              setState(() {});
+            }
+
+          case 'net':
+            if (qaLockWifi == false) {
+              openCampusWifi();
             }
         }
       });
@@ -470,7 +492,7 @@ class _MyHomePageState extends State<MyHomePage> {
           backgroundColor: Colors.transparent,
           actions: [
             IconButton(
-                icon: const Icon(Icons.format_list_numbered),
+                icon: const Icon(Icons.today),
                 tooltip: '时间线',
                 onPressed: () async {
                   final SharedPreferences prefs =
@@ -618,7 +640,9 @@ class _MyHomePageState extends State<MyHomePage> {
             if (prefs.getString('username') != null &&
                 prefs.getString('password') != null) {
               // 有登录信息
-              if (qaLock1 == false) {
+              if (qaLockCode == false &&
+                  qaLockScore == false &&
+                  qaLockSeat == false) {
                 await controller.evaluateJavascript(
                     source:
                         'var msg=document.getElementById("msg1");if(msg){console.log("登录失败");}else{fm1.username.value="${prefs.getString('username')}";fm1.password.value="${prefs.getString('password')}";fm1.passbutton.click()};');
@@ -892,6 +916,12 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         const NavigationDrawerDestination(
           label: Text(
+            '图书馆选座',
+          ),
+          icon: Icon(Icons.local_library),
+        ),
+        const NavigationDrawerDestination(
+          label: Text(
             '校历',
           ),
           icon: Icon(Icons.calendar_month),
@@ -964,8 +994,10 @@ class _MyHomePageState extends State<MyHomePage> {
       case 0:
         openInquireScore();
       case 1:
-        openCalendar();
+        openLibrarySeat();
       case 2:
+        openCalendar();
+      case 3:
         showDialog(
             context: context,
             barrierDismissible: true,
@@ -982,14 +1014,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ListTile(
                           leading: const Icon(Icons.settings),
                           title: const Text('校园网管理'),
-                          onTap: () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const WebViewPage(
-                                        title: '校园网管理',
-                                        address: 'http://10.1.2.1/')));
-                          },
+                          onTap: () => openCampusWifi(),
                         ),
                       ],
                     ),
@@ -1044,7 +1069,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ]);
             });
-      case 3:
+      case 4:
         Navigator.push(
             context,
             MaterialPageRoute(
@@ -1052,7 +1077,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       title: 'WebVPN',
                       address: 'https://webvpn.byau.edu.cn/',
                     )));
-      case 4:
+      case 5:
         if (webVPN == false) {
           Navigator.push(
               context,
@@ -1073,7 +1098,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       )));
         }
 
-      case 5:
+      case 6:
         if (webVPN == false) {
           Navigator.push(
               context,
@@ -1094,18 +1119,18 @@ class _MyHomePageState extends State<MyHomePage> {
                       )));
         }
 
-      case 6:
-        launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
       case 7:
-        launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
+        launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
       case 8:
+        launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
+      case 9:
         launchInBrowser(
             'https://gitee.com/Longhorn3683/byau_lite/wikis/%E7%96%91%E9%9A%BE%E8%A7%A3%E7%AD%94');
     }
   }
 
   void showQrCode() async {
-    qaLock1 = true;
+    qaLockCode = true;
     bool refresh = false;
     await showModalBottomSheet(
         context: context,
@@ -1162,22 +1187,44 @@ class _MyHomePageState extends State<MyHomePage> {
             },
           );
         });
-    qaLock1 = false;
+    qaLockCode = false;
   }
 
   openInquireScore() async {
-    Navigator.push(
+    await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => const WebViewPage(
                   title: '成绩查询',
                   address:
                       'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2FinquireScore%2Fmobile%2Findex.html',
-                )));
+                ))).then((val) {
+      if (qaLockScore == true) {
+        setState(() {
+          qaLockScore = false;
+        });
+      }
+    });
+  }
+
+  openLibrarySeat() async {
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const WebViewPage(
+                  title: '图书馆选座',
+                  address: 'http://libseat.byau.edu.cn/',
+                ))).then((val) {
+      if (qaLockSeat == true) {
+        setState(() {
+          qaLockSeat = false;
+        });
+      }
+    });
   }
 
   openCalendar() async {
-    qaLock2 = true;
+    qaLockCalendar = true;
     await Navigator.push(
         context,
         MaterialPageRoute(
@@ -1185,7 +1232,17 @@ class _MyHomePageState extends State<MyHomePage> {
                   title: '校历',
                   address: 'https://www.byau.edu.cn/919/list.htm',
                 )));
-    qaLock2 = false;
+    qaLockCalendar = false;
+  }
+
+  openCampusWifi() async {
+    qaLockWifi = true;
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const WebViewPage(
+                title: '校园网管理', address: 'http://10.1.2.1/')));
+    qaLockWifi = false;
   }
 
   void openSettings() async {
@@ -1202,7 +1259,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
     showModalBottomSheet(
         clipBehavior: Clip.antiAlias,
-        barrierColor: Colors.transparent,
         context: context,
         builder: (context) => StatefulBuilder(builder: (context, setState) {
               return ListView(
