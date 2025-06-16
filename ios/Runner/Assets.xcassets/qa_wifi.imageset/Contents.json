@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "qa_calendar@3x_resized.png",
+      "filename" : "qa_wifi.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "qa_calendar@2x.png",
+      "filename" : "qa_wifi@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "qa_calendar@3x.png",
+      "filename" : "qa_wifi@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
