@@ -11,10 +11,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_file_saver/flutter_file_saver.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -68,7 +68,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.6.1';
+  String version = '2.6.2';
   String firstrunVer = '2.5.2';
 
   bool qaLockCode = false;
@@ -985,6 +985,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           icon: Icon(Icons.format_quote),
         ),
+        const SizedBox(
+          height: kFloatingActionButtonMargin,
+        ),
       ],
     );
   }
@@ -1271,7 +1274,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         tooltip: '刷新',
-                        onPressed: () => setState(() {}),
+                        onPressed: () => setState(() =>
+                            courseWebViewController?.loadUrl(
+                                urlRequest: URLRequest(
+                                    url: WebUri(
+                                        'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2Fschedule%2Fmobile%2Fstudent%2Findex.html')))),
                       )
                     ],
                   ),
@@ -1589,28 +1596,34 @@ void importWakeUp(BuildContext context) {
                 shrinkWrap: true,
                 children: [
                   const Text(
-                      'WakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。\n若课表发生变化（如调课），需清空WakeUp课程表中的课程，删除已导入日程（若有），并重新进行第三步和第四步。\n\n以下为导出课表步骤：'),
+                      'WakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。\n若课表发生变化（如调课），需清空WakeUp课程表中的课程并重新导入。\n\n以下为导出课表步骤：'),
                   ListTile(
-                      leading: const Icon(Icons.download),
                       title: const Text('第一步'),
                       subtitle: const Text('下载WakeUp课程表'),
                       onTap: () => launchInBrowser('https://wakeup.fun/')),
                   ListTile(
-                      leading: const Icon(Icons.file_present),
-                      title: const Text('第二步'),
-                      subtitle: const Text('保存课表模板'),
+                      title: const Text('第一步'),
+                      subtitle: const Text('导入模板，选择WakeUp课程表'),
                       onTap: () async {
+                        /*
                         String template = await rootBundle.loadString(
                             'assets/wakeup_template.wakeup_schedule');
                         FlutterFileSaver().writeFileAsString(
                           fileName: '课表模板.wakeup_schedule',
                           data: template,
-                        );
+                        );*/
+                        String string = await rootBundle.loadString(
+                            'assets/wakeup_template.wakeup_schedule');
+                        final directory =
+                            await getApplicationDocumentsDirectory();
+                        var file = File(
+                            "${directory.path}/wakeup_template.wakeup_schedule");
+                        await file.writeAsString(string);
+                        OpenFile.open(file.path);
                       }),
                   ListTile(
-                    leading: const Icon(Icons.web),
                     title: const Text('第三步'),
-                    subtitle: const Text('从教务系统导出课表'),
+                    subtitle: const Text('从教务系统导出课表并导入'),
                     onTap: () => showDialog(
                         context: context,
                         builder: (context) {
@@ -1660,7 +1673,6 @@ void importWakeUp(BuildContext context) {
                         }),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.article),
                     title: const Text('第四步'),
                     subtitle: const Text('按照导入教程导入WakeUp课程表'),
                     onTap: () =>

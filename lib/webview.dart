@@ -1,12 +1,7 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:byau/course.dart';
 import 'package:byau/launch_in_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class WebViewPage extends StatefulWidget {
