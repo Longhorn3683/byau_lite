@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storePassword": "0000001A566AEAAEE97145017448DE46DAF79F0D8396083A21424294D2C85087F5BA72BC367F32973D71",
-          "certpath": "/Users/longhorn3683/Projects/signature/故事相册鸿蒙.cer",
+          "storeFile": "/Users/longhorn3683/Projects/signature/鸿蒙签名.p12",
+          "storePassword": "0000001A21BB9BBA34801C988E62E12311F28ED276267B1AED600E114DBDF86A9ECBFB9C9FEF4C345C19",
           "keyAlias": "longhorn3683",
-          "keyPassword": "0000001AEFAA75DE1ED7CCC1AF4B5192693B09E9D4A9D531E8461CBA3CAC795127033A717595CE6E03C0",
-          "profile": "/Users/longhorn3683/Projects/signature/极速农大鸿蒙.p7b",
+          "keyPassword": "0000001A077351C19D99B462C0B443056959FA711DD068A7912462010596E7E097880F7EA677E375B4A4",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/longhorn3683/Projects/signature/鸿蒙签名.p12"
+          "profile": "/Users/longhorn3683/Projects/signature/hmos_profile/极速农大鸿蒙.p7b",
+          "certpath": "/Users/longhorn3683/Projects/signature/鸿蒙发布证书.cer"
         }
       }
     ],
@@ -20,7 +20,8 @@
         "name": "default",
         "signingConfig": "default",
         "compatibleSdkVersion": "5.0.0(12)",
-        "runtimeOS": "HarmonyOS"
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.0.0(20)"
       }
     ],
     "buildModeSet": [

@@ -36,10 +36,19 @@ class BYAUApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1)),
+      theme: ThemeData(
+        colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1),
+        appBarTheme: const AppBarTheme(
+          surfaceTintColor: Colors.transparent,
+        ),
+      ),
       darkTheme: ThemeData(
-          brightness: Brightness.dark,
-          colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1)),
+        brightness: Brightness.dark,
+        colorSchemeSeed: const Color.fromRGBO(0, 120, 64, 1),
+        appBarTheme: const AppBarTheme(
+          surfaceTintColor: Colors.transparent,
+        ),
+      ),
       home: const MyHomePage(),
       title: '极速农大',
       debugShowCheckedModeBanner: false,
@@ -68,7 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.6.2';
+  String version = '2.6.3';
   String firstrunVer = '2.5.2';
 
   bool qaLockCode = false;
@@ -430,7 +439,7 @@ class _MyHomePageState extends State<MyHomePage> {
               openCalendar();
             }
 
-          case 'net':
+          case 'wifi':
             if (qaLockWifi == false) {
               openCampusWifi();
             }
@@ -1244,7 +1253,7 @@ class _MyHomePageState extends State<MyHomePage> {
         context,
         MaterialPageRoute(
             builder: (context) => const WebViewPage(
-                title: '校园网管理', address: 'http://10.1.2.1/')));
+                title: '校园网管理', address: 'http://10.252.102.21/')));
     qaLockWifi = false;
   }
 
