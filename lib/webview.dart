@@ -22,6 +22,15 @@ class _WebViewPageState extends State<WebViewPage> {
     super.initState();
   }
 
+  getPreferences() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    if (prefs.getString('username') != null &&
+        prefs.getString('username') != '') {
+      return prefs.getString('username');
+    }
+  }
+
   double progress = 0;
   String initialUrl = '';
   @override
@@ -134,6 +143,8 @@ class _WebViewPageState extends State<WebViewPage> {
                             retry = true;
                           }
                         }
+                      } else {
+                        retry = false;
                       }
                     },
                     onDownloadStartRequest:

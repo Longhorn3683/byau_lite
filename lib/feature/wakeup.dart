@@ -1,7 +1,113 @@
+import 'dart:io';
+
+import 'package:byau/launch_in_browser.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_file_saver/flutter_file_saver.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+void importWakeUp(BuildContext context) {
+  showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+            content: SizedBox(
+              width: 300,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  const Text(
+                      'WakeUp课程表支持上课提醒、自定义课表等功能，可接入小布建议、YOYO建议、系统日程。\n若课表发生变化（如调课），需清空WakeUp课程表中的课程并重新导入。\n\n以下为导出课表步骤：'),
+                  ListTile(
+                      title: const Text('第一步'),
+                      subtitle: const Text('下载WakeUp课程表'),
+                      onTap: () => launchInBrowser('https://wakeup.fun/')),
+                  ListTile(
+                      title: const Text('第二步'),
+                      subtitle: const Text('导入模板，选择WakeUp课程表'),
+                      onTap: () async {
+                        String string = await rootBundle.loadString(
+                            'assets/wakeup_template.wakeup_schedule');
+                        final directory =
+                            await getApplicationDocumentsDirectory();
+                        var file = File(
+                            "${directory.path}/wakeup_template.wakeup_schedule");
+                        await file.writeAsString(string);
+                        OpenFile.open(file.path);
+                      }),
+                  ListTile(
+                    title: const Text('第三步'),
+                    subtitle: const Text('从教务系统导出课表并导入'),
+                    onTap: () => showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                              title: const Text('导出课表'),
+                              content: SizedBox(
+                                width: 300,
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  children: const [
+                                    Text('将前往课表查询页面并自动导出课表。\n请选择当前的网络环境：'),
+                                  ],
+                                ),
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('取消'),
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                TextButton(
+                                  child: const Text('非校园网'),
+                                  onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const WakeUpPage(
+                                                address:
+                                                    'https://http-10-1-4-41-80.webvpn.byau.edu.cn/jsxsd/kbcx/kbxx_xzb',
+                                                webVPN: false,
+                                              ))),
+                                ),
+                                TextButton(
+                                  child: const Text('校园网'),
+                                  onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const WakeUpPage(
+                                                address:
+                                                    'http://10.1.4.41/jsxsd/kbcx/kbxx_xzb',
+                                                webVPN: true,
+                                              ))),
+                                ),
+                              ]);
+                        }),
+                  ),
+                  ListTile(
+                    title: const Text('第四步'),
+                    subtitle: const Text('按照导入教程导入WakeUp课程表'),
+                    onTap: () =>
+                        launchInBrowser('https://pd.qq.com/s/bj7h2i1t5'),
+                  ),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('确定'),
+                onPressed: () async {
+                  Navigator.pop(context);
+                },
+              ),
+            ]);
+      });
+}
 
 class WakeUpPage extends StatefulWidget {
   final String address;
