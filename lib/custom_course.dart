@@ -74,6 +74,12 @@ class _CustomCoursePageState extends State<CustomCoursePage> {
               title: Text('添加的课程不支持点击查看课程信息，且会覆盖对应开始时间的课程。\n暂不支持添加到时间线。'),
             ),
           ),
+          SliverToBoxAdapter(
+            child: ListTile(
+              title: Text('设置日程权限'),
+              onTap: () {},
+            ),
+          ),
           SliverList.builder(
               itemCount: customList().length,
               itemBuilder: (context, index) {

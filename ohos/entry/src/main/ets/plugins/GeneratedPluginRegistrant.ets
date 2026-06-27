@@ -1,9 +1,9 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
-import InAppWebViewFlutterPlugin from 'flutter_inappwebview_ohos';
-import ImagePickerPlugin from 'image_picker_ohos';
-import PathProviderPlugin from 'path_provider_ohos';
-import SharedPreferencesPlugin from 'shared_preferences_ohos';
 import UrlLauncherPlugin from 'url_launcher_ohos';
+import SharedPreferencesPlugin from 'shared_preferences_ohos';
+import PathProviderPlugin from 'path_provider_ohos';
+import ImagePickerPlugin from 'image_picker_ohos';
+import InAppWebViewFlutterPlugin from 'flutter_inappwebview_ohos';
 
 /**
  * Generated file. Do not edit.
@@ -17,11 +17,11 @@ export class GeneratedPluginRegistrant {
 
   static registerWith(flutterEngine: FlutterEngine) {
     try {
-      flutterEngine.getPlugins()?.add(new InAppWebViewFlutterPlugin());
-      flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
-      flutterEngine.getPlugins()?.add(new PathProviderPlugin());
-      flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
+      flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
+      flutterEngine.getPlugins()?.add(new PathProviderPlugin());
+      flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
+      flutterEngine.getPlugins()?.add(new InAppWebViewFlutterPlugin());
     } catch (e) {
       Log.e(
         TAG,

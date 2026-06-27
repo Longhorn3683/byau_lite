@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 2.9.0+23
 
 environment:
-  sdk: ^3.4.0
+  sdk: ^3.9.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -37,31 +37,34 @@ dependencies:
   flutter_markdown: ^0.7.2
   url_launcher: 
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      url: "https://gitcode.com/CPF-Flutter/flutter_packages.git"
       path: "packages/url_launcher/url_launcher"
   url_launcher_platform_interface: ^2.0.3
   flutter_inappwebview:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_inappwebview.git"
+      url: "https://gitcode.com/CPF-Flutter/flutter_inappwebview.git"
       path: "flutter_inappwebview"
+      ref: "br_v6.1.5_ohos"
   shared_preferences: 
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      url: "https://gitcode.com/CPF-Flutter/flutter_packages.git"
       path: "packages/shared_preferences/shared_preferences"
   path_provider:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      url: "https://gitcode.com/CPF-Flutter/flutter_packages.git"
       path: "packages/path_provider/path_provider"
   image_picker:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      url: "https://gitcode.com/CPF-Flutter/flutter_packages.git"
       path: "packages/image_picker/image_picker"
   flutter_native_splash:
     git:
-      url: "https://gitcode.com/openharmony-sig/fluttertpc_flutter_native_splash.git"
+      url: "https://gitcode.com/CPF-Flutter/fluttertpc_flutter_native_splash.git"
       path: ""
+      ref: "br_v2.4.7_ohos"
   flutter_file_saver: ^0.9.0
   open_file: ^3.5.10
+  eventide: ^0.4.0
 
 dev_dependencies:
   flutter_test:
