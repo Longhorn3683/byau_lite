@@ -32,7 +32,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "io.longhorn3683.byau"
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = '29.0.14206865'
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

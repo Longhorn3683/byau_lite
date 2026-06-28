@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:byau/campus_net.dart';
 import 'package:byau/course.dart';
 import 'package:byau/custom_course.dart';
 import 'package:byau/event_import.dart';
-import 'package:byau/feature/fail_course.dart';
 import 'package:byau/feature/login.dart';
 import 'package:byau/get_dark_bool.dart';
 import 'package:byau/launch_in_browser.dart';
 import 'package:byau/feature/wakeup.dart';
-import 'package:byau/webview.dart';
+import 'package:byau/feature/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -48,7 +48,6 @@ class BYAUApp extends StatelessWidget {
       ),
       home: const MyHomePage(),
       title: '极速农大',
-      //debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -65,25 +64,19 @@ class _MyHomePageState extends State<MyHomePage> {
   InAppWebViewController? agendaWebViewController;
   InAppWebViewController? codeWebViewController;
 
-  //CookieManager cookieManager = CookieManager.instance();
-
   @override
   void initState() {
-    //cookieManager.deleteAllCookies(); // 清除Cookies
     initApp();
     super.initState();
   }
 
-  String version = '2.7.0';
-  String firstrunVer = '2.7.0';
+  String version = '2.9.0';
+  String firstrunVer = '2.9.0';
 
   bool qaLockCode = false;
   bool qaLockScore = false;
   bool qaLockCalendar = false;
   bool qaLockSeat = false;
-  bool qaLockWifi = false;
-
-  bool webVPN = false;
 
   @override
   dispose() {
@@ -99,9 +92,20 @@ class _MyHomePageState extends State<MyHomePage> {
     if (prefs.getBool('divider') == null) {
       prefs.setBool('divider', true);
     }
-
     if (prefs.getBool('overview') == null) {
       prefs.setBool('overview', false);
+    }
+    if (prefs.getBool('beta') == null) {
+      prefs.setBool('beta', true);
+    }
+    if (prefs.getDouble('transparency_background') == null) {
+      prefs.setDouble('transparency_background', 0.75);
+    }
+    if (prefs.getDouble('transparency_card') == null) {
+      prefs.setDouble('transparency_card', 0.75);
+    }
+    if (prefs.getString('nickname') == null) {
+      prefs.setString('nickname', '');
     }
 
     // 弹出首次使用
@@ -123,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       const ShortcutItem(
         type: 'seat',
-        localizedTitle: '图书馆选座',
+        localizedTitle: '研修间预约',
         icon: 'qa_seat',
       ),
       const ShortcutItem(
@@ -131,7 +135,6 @@ class _MyHomePageState extends State<MyHomePage> {
         localizedTitle: '校历',
         icon: 'qa_calendar',
       ),
-      const ShortcutItem(type: 'wifi', localizedTitle: '校园网', icon: 'qa_wifi'),
     ];
     const QuickActions().setShortcutItems(shortcutList);
   }
@@ -265,9 +268,20 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  double transparency = 0.75;
+  double transparencyCard = 0.75;
+
+  void Function()? layerRefresh;
+  void Function()? cardRefresh1;
+  void Function()? cardRefresh2;
+
   getBackground() async {
     Directory? document = await getApplicationDocumentsDirectory();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     File bgFile = File('${document.path}/background');
+    if (prefs.getDouble('transparency_background') != null) {
+      transparency = prefs.getDouble('transparency_background')!;
+    }
     if (bgFile.existsSync()) {
       return bgFile;
     } else {
@@ -315,27 +329,9 @@ class _MyHomePageState extends State<MyHomePage> {
             if (qaLockCalendar == false) {
               openCalendar();
             }
-
-          case 'wifi':
-            if (qaLockWifi == false) {
-              openCampusWifi();
-            }
         }
       });
     });
-
-    SystemUiOverlayStyle systemUiOverlayStyle = SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: isDarkMode(context)
-          ? Brightness.light
-          : Brightness.dark,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: isDarkMode(context)
-          ? Brightness.light
-          : Brightness.dark,
-      systemNavigationBarContrastEnforced: false,
-    );
-
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -359,10 +355,15 @@ class _MyHomePageState extends State<MyHomePage> {
                     fit: StackFit.expand,
                     children: [
                       Image.file(snapshot.data, fit: BoxFit.cover),
-                      Container(
-                        color: isDarkMode(context)
-                            ? const Color.fromRGBO(0, 0, 0, 0.3)
-                            : const Color.fromRGBO(255, 255, 255, 0.3),
+                      StatefulBuilder(
+                        builder: (context, layerState) {
+                          layerRefresh = () => layerState(() {});
+                          return Container(
+                            color: isDarkMode(context)
+                                ? Color.fromRGBO(0, 0, 0, transparency)
+                                : Color.fromRGBO(255, 255, 255, transparency),
+                          );
+                        },
                       ),
                     ],
                   );
@@ -373,9 +374,32 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           },
         ),
-        classicUI(),
+        FutureBuilder(
+          future: getPrefsValue('beta', 'bool'),
+          builder: (BuildContext context, AsyncSnapshot snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              if (snapshot.hasError) {
+                // 请求失败，显示错误
+                return switchUI(true);
+              } else {
+                // 请求成功，显示数据
+                return switchUI(snapshot.data);
+              }
+            } else {
+              return const SizedBox();
+            }
+          },
+        ),
       ],
     );
+  }
+
+  Widget switchUI(bool beta) {
+    if (beta) {
+      return betaUI();
+    } else {
+      return classicUI();
+    }
   }
 
   Widget classicUI() {
@@ -397,22 +421,14 @@ class _MyHomePageState extends State<MyHomePage> {
           return Scaffold(
             backgroundColor: Colors.transparent,
             resizeToAvoidBottomInset: false,
-            appBar: AppBar(
-              systemOverlayStyle: systemUiOverlayStyle,
-              backgroundColor: Colors.transparent,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  tooltip: '设置',
-                  onPressed: () => openSettings(),
-                ),
-              ],
-            ),
-            body: Row(
-              children: [
-                Expanded(child: showScheduleClassic(true)),
-                Expanded(child: todayWebView()),
-              ],
+            body: SafeArea(
+              child: Row(
+                children: [
+                  navigationRail(),
+                  Expanded(child: showSchedule(true)),
+                  Expanded(child: todayWebView()),
+                ],
+              ),
             ),
             floatingActionButton: FloatingActionButton(
               tooltip: '虚拟校园卡',
@@ -439,15 +455,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ],
             ),
-            body: widgetLayer(
-              SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    Expanded(flex: 2, child: showScheduleClassic(false)),
-                    Expanded(child: todayWebView()),
-                  ],
-                ),
+            body: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Expanded(flex: 2, child: showSchedule(false)),
+                  Expanded(child: todayWebView()),
+                ],
               ),
             ),
             floatingActionButton: FloatingActionButton(
@@ -464,86 +478,310 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  refreshUI() async {
-    if (logon == true) {
-      courseWebViewController?.loadUrl(
-        urlRequest: URLRequest(
-          url: WebUri(
-            'https://ids.byau.edu.cn/cas/login?service=https://light.byau.edu.cn/_web/_lightapp/schedule/mobile/student/index.html',
-          ),
-        ),
-      );
+  Widget betaUI() {
+    SystemUiOverlayStyle systemUiOverlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDarkMode(context)
+          ? Brightness.light
+          : Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: isDarkMode(context)
+          ? Brightness.light
+          : Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
+    );
+
+    getCardTransparency() async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      if (prefs.getDouble('transparency_card') != null) {
+        transparencyCard = prefs.getDouble('transparency_card')!;
+      }
     }
-  }
 
-  bool logon = false;
-  HeadlessInAppWebView? headlessWebView;
-
-  getAccountStatus() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    if (prefs.getString('username') != null &&
-        prefs.getString('password') != null &&
-        logon == false) {
-      // 有自动登录信息且未登录
-      logon = true;
-      return logon;
-    } else if (logon == true) {
-      //已登录
-      return logon;
-    } else {
-      // 无登录信息
-      logon = false;
-      return logon;
+    getGreeting() async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String suffix = '';
+      if (prefs.getString('nickname')!.isNotEmpty) {
+        suffix = '，${prefs.getString('nickname')}';
+      }
+      if (DateTime.now().hour >= 22 && DateTime.now().hour < 6) {
+        // 22点开始到6点前
+        return '夜深了，注意休息';
+      } else if (DateTime.now().hour >= 6 && DateTime.now().hour < 12) {
+        // 6点开始到12点前
+        return '早上好$suffix';
+      } else if (DateTime.now().hour >= 12 && DateTime.now().hour < 14) {
+        // 12点开始到14点前
+        return '中午好$suffix';
+      } else if (DateTime.now().hour >= 14 && DateTime.now().hour < 19) {
+        // 14点开始到19点前
+        return '下午好$suffix';
+      } else {
+        // 19点开始到22点前
+        return '晚上好$suffix';
+      }
     }
-  }
 
-  Widget widgetLayer(Widget widget) {
-    return FutureBuilder(
-      future: getAccountStatus(),
-      builder: (BuildContext context, AsyncSnapshot snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          if (snapshot.hasError) {
-            // 请求失败，显示错误
-            return const Icon(Icons.error);
-          } else {
-            // 请求成功，显示数据
-            if (snapshot.data == true) {
-              // 已登录
-              return widget;
+    Widget greeting() {
+      return FutureBuilder(
+        future: getGreeting(),
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            if (snapshot.hasError) {
+              // 请求失败，显示错误
+              return const ListTile();
             } else {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Icon(Icons.error, size: 52),
-                    ),
-                    Text(
-                      '登录信息未设置',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ],
+              // 请求成功，显示数据
+              return ListTile(
+                title: Text(
+                  snapshot.data,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               );
             }
+          } else {
+            return const ListTile();
           }
+        },
+      );
+    }
+
+    Widget todayCard() {
+      return FutureBuilder(
+        future: getCardTransparency(),
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return StatefulBuilder(
+              builder: (context, cardState) {
+                cardRefresh1 = () => cardState(() {});
+                return Card(
+                  color: Theme.of(
+                    context,
+                  ).cardColor.withValues(alpha: transparencyCard),
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(24),
+                    ), // 设置圆角半径
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: todayWebView(),
+                );
+              },
+            );
+          } else {
+            return const SizedBox();
+          }
+        },
+      );
+    }
+
+    Widget scheduleCard() {
+      return FutureBuilder(
+        future: getCardTransparency(),
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return StatefulBuilder(
+              builder: (context, cardState) {
+                cardRefresh2 = () => cardState(() {});
+                return Card(
+                  color: Theme.of(
+                    context,
+                  ).cardColor.withValues(alpha: transparencyCard),
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(24),
+                    ), // 设置圆角半径
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: showSchedule(true),
+                );
+              },
+            );
+          } else {
+            return const SizedBox();
+          }
+        },
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth > 500) {
+          // 宽屏适配
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            resizeToAvoidBottomInset: false,
+            body: SafeArea(
+              child: Row(
+                children: [
+                  navigationRail(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        greeting(),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 16,
+                            ),
+                            child: todayCard(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
+                      child: scheduleCard(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+            ),
+            floatingActionButton: FloatingActionButton(
+              mini: true,
+              tooltip: '虚拟校园卡',
+              onPressed: () {
+                showQrCode();
+              },
+              child: const Icon(Icons.qr_code),
+            ),
+            drawer: drawer(),
+          );
         } else {
-          return SizedBox();
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            resizeToAvoidBottomInset: false,
+            appBar: AppBar(
+              systemOverlayStyle: systemUiOverlayStyle,
+              backgroundColor: Colors.transparent,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  tooltip: '设置',
+                  onPressed: () => openSettings(),
+                ),
+              ],
+            ),
+            body: Column(
+              children: [
+                greeting(),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: todayCard(),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: scheduleCard(),
+                  ),
+                ),
+
+                const SizedBox(height: kBottomNavigationBarHeight),
+              ],
+            ),
+            floatingActionButton: FloatingActionButton(
+              mini: true,
+              tooltip: '虚拟校园卡',
+              onPressed: () {
+                showQrCode();
+              },
+              child: const Icon(Icons.qr_code),
+            ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            drawer: drawer(),
+          );
         }
       },
     );
   }
 
-  Widget showScheduleClassic(bool tablet) {
+  refreshUI() async {
+    courseWebViewController?.loadUrl(
+      urlRequest: URLRequest(
+        url: WebUri(
+          'https://ids.byau.edu.cn/cas/login?service=https://light.byau.edu.cn/_web/_lightapp/schedule/mobile/student/index.html',
+        ),
+      ),
+    );
+  }
+
+  Widget navigationRail() {
+    return NavigationRail(
+      backgroundColor: Colors.transparent,
+      trailingAtBottom: true,
+      scrollable: true,
+      onDestinationSelected: handleDestinationSelected,
+      destinations: const [
+        NavigationRailDestination(label: Text('成绩查询'), icon: Icon(Icons.score)),
+        NavigationRailDestination(
+          label: Text('教务系统'),
+          icon: Icon(Icons.class_),
+        ),
+        NavigationRailDestination(
+          label: Text('图书馆系统'),
+          icon: Icon(Icons.local_library),
+        ),
+        NavigationRailDestination(
+          label: Text('研修间预约'),
+          icon: Icon(Icons.chair),
+        ),
+        NavigationRailDestination(label: Text('校园网'), icon: Icon(Icons.wifi)),
+        NavigationRailDestination(
+          label: Text('WebVPN'),
+          icon: Icon(Icons.vpn_key),
+        ),
+        NavigationRailDestination(
+          label: Text('校历'),
+          icon: Icon(Icons.calendar_month),
+        ),
+        NavigationRailDestination(
+          label: Text('校园全景'),
+          icon: Icon(Icons.vrpano),
+        ),
+        NavigationRailDestination(
+          label: Text('学生社区'),
+          icon: Icon(Icons.home_work),
+        ),
+      ],
+      trailing: IconButton(
+        icon: const Icon(Icons.settings),
+        tooltip: '设置',
+        onPressed: () => openSettings(),
+      ),
+      selectedIndex: null,
+    );
+  }
+
+  Widget showSchedule(bool noPadding) {
     return FutureBuilder(
       future: getPrefsValue('zoom', 'double'),
       builder: (BuildContext context, AsyncSnapshot snapshot) {
-        double topPadding = tablet ? 0 : MediaQuery.of(context).padding.top;
-        double topPaddingCourse = tablet
+        double topPadding = noPadding ? 0 : MediaQuery.of(context).padding.top;
+        double topPaddingCourse = noPadding
             ? 0
-            : MediaQuery.of(context).padding.top - kToolbarHeight + 4;
+            : MediaQuery.of(context).padding.top - kToolbarHeight + 5;
         if (snapshot.connectionState == ConnectionState.done) {
           if (snapshot.hasError) {
             // 请求失败，显示错误
@@ -617,12 +855,15 @@ class _MyHomePageState extends State<MyHomePage> {
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         if (url!.path.contains('/cas/login') && retry == false) {
           // 检测到登录页面且未触发重试，自动登录
-          await controller.evaluateJavascript(
-            source:
-                'fm1.username.value="${prefs.getString('username')}";fm1.password.value="${prefs.getString('password')}";fm1.passbutton.click()',
-          );
+          if (prefs.getString('username')!.isNotEmpty &&
+              prefs.getString('password')!.isNotEmpty) {
+            await controller.evaluateJavascript(
+              source:
+                  'fm1.username.value="${prefs.getString('username')}";fm1.password.value="${prefs.getString('password')}";fm1.passbutton.click()',
+            );
+          }
           retry = true;
-        } else if (url!.path.contains(
+        } else if (url.path.contains(
           '_web/_lightapp/schedule/mobile/student/index.html',
         )) {
           // 登录成功，重置重试状态
@@ -780,20 +1021,19 @@ class _MyHomePageState extends State<MyHomePage> {
           showDialog(
             context: context,
             builder: (context) {
-              logon = false;
               return AlertDialog(
                 title: const Text('登录失败'),
                 content: const Text('密码可能已被修改或学号因毕业被注销，请重新设置登录信息。'),
                 actions: <Widget>[
                   TextButton(
-                    child: const Text("打开设置"),
-                    onPressed: () => openSettings(),
-                  ),
-                  TextButton(
-                    child: const Text('确定'),
+                    child: const Text('取消'),
                     onPressed: () {
                       Navigator.pop(context);
                     },
+                  ),
+                  TextButton(
+                    child: const Text("确定"),
+                    onPressed: () => showAutoLoginDialog(context),
                   ),
                 ],
               );
@@ -817,7 +1057,7 @@ class _MyHomePageState extends State<MyHomePage> {
         final SharedPreferences prefs = await SharedPreferences.getInstance();
 
         // 删除元素
-        if (prefs.getBool('beta') == true) {
+        /*if (prefs.getBool('beta') == true) {
           await agendaWebViewController?.evaluateJavascript(
             source: """
             document.getElementsByClassName("m-news-title m-news-flex ui-border-b")[0].remove()
@@ -830,7 +1070,13 @@ class _MyHomePageState extends State<MyHomePage> {
             loadMore.remove();
           """,
           );
-        }
+        }*/
+        await agendaWebViewController?.evaluateJavascript(
+          source: """
+            var loadMore = document.getElementById("loadMore");
+            loadMore.remove();
+          """,
+        );
 
         // 深色模式适配
         if (isDarkMode(context)) {
@@ -900,7 +1146,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   meta.httpEquiv = "Content-Security-Policy";
                   meta.content = "upgrade-insecure-requests";
                   document.getElementsByTagName('head')[0].appendChild(meta);
-
                 ''',
             );
             if (refresh == false) {
@@ -917,6 +1162,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return NavigationDrawer(
       selectedIndex: 1145141919810,
       onDestinationSelected: handleDestinationSelected,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 1.0),
       children: <Widget>[
         ListTile(
           title: Text(
@@ -961,12 +1207,16 @@ class _MyHomePageState extends State<MyHomePage> {
           icon: Icon(Icons.score),
         ),
         const NavigationDrawerDestination(
-          label: Text('图书馆选座'),
+          label: Text('教务系统'),
+          icon: Icon(Icons.class_),
+        ),
+        const NavigationDrawerDestination(
+          label: Text('图书馆系统'),
           icon: Icon(Icons.local_library),
         ),
         const NavigationDrawerDestination(
-          label: Text('校历'),
-          icon: Icon(Icons.calendar_month),
+          label: Text('研修间预约'),
+          icon: Icon(Icons.chair),
         ),
         const NavigationDrawerDestination(
           label: Text('校园网'),
@@ -976,33 +1226,10 @@ class _MyHomePageState extends State<MyHomePage> {
           label: Text('WebVPN'),
           icon: Icon(Icons.vpn_key),
         ),
-        const Divider(),
-        StatefulBuilder(
-          builder: (context, setState2) {
-            return SwitchListTile(
-              title: const Text('WebVPN访问'),
-              value: webVPN,
-              onChanged: (bool value) {
-                setState2(() {
-                  webVPN = value;
-                });
-              },
-            );
-          },
-        ),
         const NavigationDrawerDestination(
-          label: Text('挂了吗'),
-          icon: Icon(Icons.close),
+          label: Text('校历'),
+          icon: Icon(Icons.calendar_month),
         ),
-        const NavigationDrawerDestination(
-          label: Text('教务系统'),
-          icon: Icon(Icons.class_),
-        ),
-        const NavigationDrawerDestination(
-          label: Text('图书馆系统'),
-          icon: Icon(Icons.library_books),
-        ),
-        const Divider(),
         const ListTile(title: Text('某科学的超哥发明')),
         const NavigationDrawerDestination(
           label: Text('校园全景'),
@@ -1012,6 +1239,7 @@ class _MyHomePageState extends State<MyHomePage> {
           label: Text('学生社区'),
           icon: Icon(Icons.home_work),
         ),
+
         const SizedBox(height: kFloatingActionButtonMargin),
       ],
     );
@@ -1020,176 +1248,60 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> handleDestinationSelected(int index) async {
     switch (index) {
       case 0:
-        showDialog(
-          context: context,
-          barrierDismissible: true,
-          builder: (context) {
-            return AlertDialog(
-              content: const Text('此选项为八一农大APP的成绩查询页面，数据更新比教务系统慢，建议使用教务系统查询。'),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                TextButton(
-                  child: const Text('继续'),
-                  onPressed: () => openInquireScore(),
-                ),
-              ],
-            );
-          },
-        );
+        openInquireScore();
       case 1:
-        openLibrarySeat();
-      case 2:
-        openCalendar();
-      case 3:
-        showDialog(
-          context: context,
-          barrierDismissible: true,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('校园网'),
-              content: SizedBox(
-                width: 300,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'BYAU和BYAU-WINDOWS主要区别在认证方式不同，建议优先使用前者，支持自动登录。\n后者为网页登录，且离线一段时间后需重新登录。',
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.phone),
-                      title: const Text('联系售后'),
-                      onTap: () => showDialog(
-                        context: context,
-                        barrierDismissible: true,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('售后电话'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '服务时间：08:30-20:00\n校园卡解封需前往东北石油大学附近营业厅（也就是离学校最近的自有营业厅）。',
-                                ),
-                                const SizedBox(height: 4),
-                                ListTile(
-                                  leading: const Icon(Icons.phone),
-                                  title: const Text('198 4597 4477'),
-                                  onTap: () =>
-                                      launchInBrowser('tel:19845974477'),
-                                ),
-                                ListTile(
-                                  leading: const Icon(Icons.phone),
-                                  title: const Text('183 4550 0139'),
-                                  onTap: () =>
-                                      launchInBrowser('tel:18345500139'),
-                                ),
-                              ],
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('确定'),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('前往管理'),
-                  onPressed: () {
-                    openCampusWifi();
-                  },
-                ),
-                TextButton(
-                  child: const Text('取消'),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            );
-          },
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const WebViewPage(
+              title: '教务系统',
+              address:
+                  'https://webvpn.byau.edu.cn/auth/login?returnUrl=https://http-10-255-255-130-80.webvpn.byau.edu.cn/jsxsd/',
+              campusNetAddress:
+                  'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
+            ),
+          ),
         );
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const WebViewPage(
+              title: '图书馆系统',
+              address:
+                  'https://webvpn.byau.edu.cn/_webvpn_*/https://ilibopac.byau.edu.cn/space/reader/readerHome',
+              campusNetAddress:
+                  'https://ilibopac.byau.edu.cn/space/reader/readerHome',
+            ),
+          ),
+        );
+      case 3:
+        openLibrarySeat();
+
       case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CampusNetPage()),
+        );
+
+      case 5:
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => const WebViewPage(
               title: 'WebVPN',
               address: 'https://webvpn.byau.edu.cn/',
+              campusNetAddress: '',
             ),
           ),
         );
-      case 5:
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FailCoursePage(webVPN: webVPN),
-          ),
-        );
+
       case 6:
-        if (webVPN == false) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const WebViewPage(
-                title: '教务系统',
-                address:
-                    'https://ids.byau.edu.cn/cas/login?service=http%3A%2F%2F10.1.4.41%2Fjsxsd%2F',
-              ),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const WebViewPage(
-                title: '教务系统',
-                address:
-                    'https://webvpn.byau.edu.cn/auth/login?returnUrl=https://http-10-255-255-130-80.webvpn.byau.edu.cn/jsxsd/',
-              ),
-            ),
-          );
-        }
+        openCalendar();
 
       case 7:
-        if (webVPN == false) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const WebViewPage(
-                title: '图书馆系统',
-                address: 'https://ilibopac.byau.edu.cn/space/reader/readerHome',
-              ),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const WebViewPage(
-                title: '图书馆系统',
-                address:
-                    'https://webvpn.byau.edu.cn/_webvpn_*/https://ilibopac.byau.edu.cn/space/reader/readerHome',
-              ),
-            ),
-          );
-        }
-
-      case 8:
         launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
-      case 9:
+      case 8:
         launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
     }
   }
@@ -1215,6 +1327,7 @@ class _MyHomePageState extends State<MyHomePage> {
           title: '成绩查询',
           address:
               'https://ids.byau.edu.cn/cas/login?service=https%3A%2F%2Flight.byau.edu.cn%2F_web%2F_lightapp%2FinquireScore%2Fmobile%2Findex.html',
+          campusNetAddress: '',
         ),
       ),
     ).then((val) {
@@ -1231,8 +1344,9 @@ class _MyHomePageState extends State<MyHomePage> {
       context,
       MaterialPageRoute(
         builder: (context) => const WebViewPage(
-          title: '图书馆选座',
+          title: '研修间预约',
           address: 'http://libseat.byau.edu.cn/',
+          campusNetAddress: '',
         ),
       ),
     ).then((val) {
@@ -1252,22 +1366,11 @@ class _MyHomePageState extends State<MyHomePage> {
         builder: (context) => const WebViewPage(
           title: '校历',
           address: 'https://www.byau.edu.cn/919/list.htm',
+          campusNetAddress: '',
         ),
       ),
     );
     qaLockCalendar = false;
-  }
-
-  openCampusWifi() async {
-    qaLockWifi = true;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            const WebViewPage(title: '校园网管理', address: 'http://10.252.102.21/'),
-      ),
-    );
-    qaLockWifi = false;
   }
 
   void openSettings() async {
@@ -1278,7 +1381,7 @@ class _MyHomePageState extends State<MyHomePage> {
           prefs.getString('username') != '') {
         return prefs.getString('username');
       } else {
-        return '未知学号';
+        return '未设置';
       }
     }
 
@@ -1301,9 +1404,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
               ListTile(
-                contentPadding: EdgeInsets.only(left: 16, right: 8),
+                contentPadding: const EdgeInsets.only(left: 16, right: 8),
                 leading: const Icon(Icons.account_circle),
-                title: Text('自动登录'),
+                title: const Text('自动登录'),
                 subtitle: Text(getUsername()!),
                 trailing: MenuAnchor(
                   builder:
@@ -1325,47 +1428,37 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                   menuChildren: [
                     MenuItemButton(
-                      leadingIcon: Icon(Icons.info),
-                      child: Text('个人信息'),
-                      onPressed: () {},
-                    ),
-                    MenuItemButton(
-                      leadingIcon: Icon(Icons.logout),
-                      child: Text('退出登录'),
-                      onPressed: () {},
+                      leadingIcon: const Icon(Icons.info),
+                      child: const Text('个人信息'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const WebViewPage(
+                              title: '个人信息',
+                              address:
+                                  'https://imp.byau.edu.cn/_ids_mobile/myIndex',
+                              campusNetAddress: '',
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
                 onTap: () async {
-                  final SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
-                  if (prefs.getString('username') == null) {
-                    // 登录信息未设置
-                    showAutoLoginDialog(context).then((value) {
-                      print(value);
-                      if (value == true) {
-                        refreshUI();
-                        setSettingsState(() {});
-                        login = false;
-                      }
-                    });
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WebViewPage(
-                          title: '个人信息',
-                          address:
-                              'https://imp.byau.edu.cn/_ids_mobile/myIndex',
-                        ),
-                      ),
-                    );
-                  }
+                  showAutoLoginDialog(context).then((value) {
+                    if (value == true) {
+                      refreshUI();
+                      setSettingsState(() {});
+                      login = false;
+                    }
+                  });
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.view_agenda),
-                title: const Text('主页设置'),
+                title: const Text('个性化'),
                 onTap: () => showScheduleSettings(),
               ),
               ListTile(
@@ -1395,7 +1488,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     barrierDismissible: true,
                     builder: (context) {
                       return AlertDialog(
-                        title: const Text('学习通课程邀请码'),
+                        title: const Text('学习通课程'),
                         content: const Text('71572560'),
                         actions: <Widget>[
                           TextButton(
@@ -1419,14 +1512,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.message),
-                title: const Text('QQ频道'),
-                subtitle: const Text("应用更新、二手交易、吹水"),
-                onTap: () {
-                  launchInBrowser('https://pd.qq.com/s/at5gp2fia?b=9');
-                },
-              ),
-              ListTile(
                 leading: const Icon(Icons.home),
                 title: const Text('Longhorn3683的小屋'),
                 subtitle: const Text("来开发者的小屋坐坐吧"),
@@ -1435,16 +1520,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
               ),
               const Divider(),
-              ListTile(
-                leading: const Icon(Icons.code),
-                title: const Text("项目地址"),
-                subtitle: const Text(
-                  "https://github.com/Longhorn3683/byau_lite",
-                ),
-                onTap: () {
-                  launchInBrowser("https://github.com/Longhorn3683/byau_lite");
-                },
-              ),
+
               ListTile(
                 leading: const Icon(Icons.file_present),
                 title: const Text('使用协议'),
@@ -1510,6 +1586,16 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.code),
+                title: const Text("项目地址"),
+                subtitle: const Text(
+                  "https://github.com/Longhorn3683/byau_lite",
+                ),
+                onTap: () {
+                  launchInBrowser("https://github.com/Longhorn3683/byau_lite");
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.info),
                 title: const Text("关于"),
                 subtitle: Text("版本 $version"),
@@ -1536,14 +1622,22 @@ class _MyHomePageState extends State<MyHomePage> {
     Directory? document = await getApplicationDocumentsDirectory();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     File bgFile = File('${document.path}/background');
-
     Navigator.pop(context);
+
+    String getNickname() {
+      if (prefs.getString('nickname')!.isEmpty) {
+        return '设置昵称';
+      } else {
+        return prefs.getString('nickname')!;
+      }
+    }
+
     await showModalBottomSheet(
       clipBehavior: Clip.antiAlias,
       barrierColor: Colors.transparent,
       backgroundColor: Theme.of(
         context,
-      ).scaffoldBackgroundColor.withOpacity(0.9),
+      ).scaffoldBackgroundColor.withValues(alpha: 0.9),
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState2) {
@@ -1551,23 +1645,109 @@ class _MyHomePageState extends State<MyHomePage> {
             shrinkWrap: true,
             children: [
               AppBar(
-                title: const Text('主页设置'),
+                title: const Text('个性化'),
                 backgroundColor: Colors.transparent,
                 actions: [
                   IconButton(
                     onPressed: () {
                       refreshUI();
                     },
-                    icon: Icon(Icons.refresh),
+                    icon: const Icon(Icons.refresh),
                   ),
                 ],
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text('课程表'),
+              SwitchListTile(
+                value: prefs.getBool('beta')!,
+                title: const Text('全新UI'),
+                secondary: const Icon(Icons.color_lens),
+                onChanged: (value) {
+                  prefs.setBool('beta', value);
+                  setState2(() {
+                    setState(() {});
+                  });
+                },
               ),
               ListTile(
-                leading: const Icon(Icons.image),
+                leading: const Icon(Icons.person),
+                title: const Text('昵称'),
+                subtitle: Text(getNickname()),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: true,
+                    builder: (context) {
+                      final nicknameEdit = TextEditingController();
+                      nicknameEdit.text = prefs.getString('nickname')!;
+                      return AlertDialog(
+                        title: const Text('昵称'),
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          child: ListView(
+                            shrinkWrap: true,
+                            children: [
+                              const SizedBox(height: 4),
+                              TextField(
+                                autofocus: true,
+                                controller: nicknameEdit,
+                                onSubmitted: (value) {
+                                  nicknameEdit.text = value;
+                                },
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text('取消'),
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                          ),
+                          TextButton(
+                            child: const Text('确定'),
+                            onPressed: () {
+                              prefs.setString('nickname', nicknameEdit.text);
+                              setState2(() {});
+                              setState(() {});
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+
+              ListTile(
+                title: const Text('卡片透明度'),
+                subtitle: Slider(
+                  padding: EdgeInsets.zero,
+                  value: transparencyCard,
+                  min: 0.00,
+                  max: 1.00,
+                  divisions: 100,
+                  label: transparencyCard.toString(),
+                  onChanged: (value) {
+                    // 拖动改变进度
+                    setState2(() {
+                      transparencyCard = value;
+                    });
+                  },
+                  onChangeEnd: (value) {
+                    prefs.setDouble('transparency_card', value);
+                    cardRefresh1?.call();
+                    cardRefresh2?.call();
+                  },
+                ),
+              ),
+              const Divider(),
+
+              ListTile(
+                leading: const Icon(Icons.wallpaper),
                 title: const Text("自定义背景"),
                 subtitle: const Text('支持GIF动图'),
                 onTap: () async {
@@ -1614,11 +1794,31 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
               ),
+              ListTile(
+                title: const Text('背景透明度'),
+                subtitle: Slider(
+                  padding: EdgeInsets.zero,
+                  value: transparency,
+                  min: 0.00,
+                  max: 1.00,
+                  divisions: 100,
+                  label: transparency.toString(),
+                  onChanged: (value) {
+                    // 拖动改变进度
+                    setState2(() {
+                      transparency = value;
+                    });
+                    layerRefresh?.call();
+                  },
+                  onChangeEnd: (value) {
+                    prefs.setDouble('transparency_background', value);
+                  },
+                ),
+              ),
               SwitchListTile(
                 value: prefs.getBool('transparent')!,
-                secondary: const Icon(Icons.wallpaper),
                 title: const Text('纯色背景'),
-                subtitle: const Text('深色模式或自定义背景不生效'),
+                subtitle: const Text('深色模式或自定义背景不可用'),
                 onChanged: (value) {
                   prefs.setBool('transparent', value);
                   setState2(() {
@@ -1626,9 +1826,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   });
                 },
               ),
+              const Divider(),
               SwitchListTile(
                 value: prefs.getBool('divider')!,
-                secondary: const Icon(Icons.view_agenda),
                 title: const Text('删除分隔线'),
                 onChanged: (value) {
                   prefs.setBool('divider', value);
@@ -1740,6 +1940,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   );
                 },
               ),
+              const Divider(),
+
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text('自定义课程'),
