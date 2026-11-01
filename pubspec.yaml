@@ -62,9 +62,6 @@ dependencies:
       url: "https://gitcode.com/CPF-Flutter/fluttertpc_flutter_native_splash.git"
       path: ""
       ref: "br_v2.4.7_ohos"
-  flutter_file_saver: ^0.9.0
-  open_file: ^3.5.10
-  eventide: ^0.4.0
 
 dev_dependencies:
   flutter_test:

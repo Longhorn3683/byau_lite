@@ -4,11 +4,9 @@ import 'dart:io';
 import 'package:byau/campus_net.dart';
 import 'package:byau/course.dart';
 import 'package:byau/custom_course.dart';
-import 'package:byau/event_import.dart';
 import 'package:byau/feature/login.dart';
 import 'package:byau/get_dark_bool.dart';
 import 'package:byau/launch_in_browser.dart';
-import 'package:byau/feature/wakeup.dart';
 import 'package:byau/feature/webview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +74,6 @@ class _MyHomePageState extends State<MyHomePage> {
   bool qaLockCode = false;
   bool qaLockScore = false;
   bool qaLockCalendar = false;
-  bool qaLockSeat = false;
 
   @override
   dispose() {
@@ -96,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
       prefs.setBool('overview', false);
     }
     if (prefs.getBool('beta') == null) {
-      prefs.setBool('beta', true);
+      prefs.setBool('beta', false);
     }
     if (prefs.getDouble('transparency_background') == null) {
       prefs.setDouble('transparency_background', 0.75);
@@ -113,34 +110,34 @@ class _MyHomePageState extends State<MyHomePage> {
       await showFirstRunDialog();
     }
 
-    // 设置快捷菜单
-    List<ShortcutItem> shortcutList = [
-      const ShortcutItem(
-        type: 'code',
-        localizedTitle: '虚拟校园卡',
-        icon: 'qa_code',
-      ),
-      const ShortcutItem(
-        type: 'score',
-        localizedTitle: '成绩查询',
-        icon: 'qa_score',
-      ),
-      const ShortcutItem(
-        type: 'seat',
-        localizedTitle: '研修间预约',
-        icon: 'qa_seat',
-      ),
-      const ShortcutItem(
-        type: 'calendar',
-        localizedTitle: '校历',
-        icon: 'qa_calendar',
-      ),
-    ];
-    const QuickActions().setShortcutItems(shortcutList);
+    if (Platform.isAndroid || Platform.isIOS) {
+      // 设置快捷菜单
+      List<ShortcutItem> shortcutList = [
+        const ShortcutItem(
+          type: 'code',
+          localizedTitle: '虚拟校园卡',
+          icon: 'qa_code',
+        ),
+        const ShortcutItem(
+          type: 'score',
+          localizedTitle: '成绩查询',
+          icon: 'qa_score',
+        ),
+
+        const ShortcutItem(
+          type: 'calendar',
+          localizedTitle: '校历',
+          icon: 'qa_calendar',
+        ),
+      ];
+      const QuickActions().setShortcutItems(shortcutList);
+    }
   }
 
   showFirstRunDialog() async {
-    const QuickActions().clearShortcutItems;
+    if (Platform.isAndroid || Platform.isIOS) {
+      const QuickActions().clearShortcutItems;
+    }
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -229,12 +226,15 @@ class _MyHomePageState extends State<MyHomePage> {
               TextButton(
                 child: const Text('拒绝'),
                 onPressed: () {
-                  showDialog(
-                    barrierDismissible: false,
-                    builder: (context) {
-                      return PopScope(
-                        canPop: false,
-                        child: AlertDialog(
+                  if (Platform.isAndroid || Platform.isOhos) {
+                    // 在支持平台上拒绝则退出
+                    SystemNavigator.pop();
+                  } else {
+                    // 在不支持平台上显示拒绝信息
+                    showDialog(
+                      barrierDismissible: false,
+                      builder: (context) {
+                        return AlertDialog(
                           content: const Text('本APP需要同意使用协议和隐私政策才能使用。'),
                           actions: <Widget>[
                             TextButton(
@@ -244,11 +244,11 @@ class _MyHomePageState extends State<MyHomePage> {
                               },
                             ),
                           ],
-                        ),
-                      );
-                    },
-                    context: context,
-                  );
+                        );
+                      },
+                      context: context,
+                    );
+                  }
                 },
               ),
               TextButton(
@@ -259,6 +259,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   prefs.setString("version", firstrunVer);
 
                   Navigator.pop(context);
+                  openSettings();
                 },
               ),
             ],
@@ -306,31 +307,27 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      const QuickActions().initialize((String shortcutType) {
-        switch (shortcutType) {
-          case 'code':
-            if (qaLockCode == false) {
-              showQrCode();
-            }
+      if (Platform.isAndroid || Platform.isIOS) {
+        const QuickActions().initialize((String shortcutType) {
+          switch (shortcutType) {
+            case 'code':
+              if (qaLockCode == false) {
+                showQrCode();
+              }
 
-          case 'score':
-            if (qaLockScore == false) {
-              qaLockScore = true;
-              openInquireScore();
-            }
+            case 'score':
+              if (qaLockScore == false) {
+                qaLockScore = true;
+                openInquireScore();
+              }
 
-          case 'seat':
-            if (qaLockSeat == false) {
-              qaLockSeat = true;
-              openLibrarySeat();
-            }
-
-          case 'calendar':
-            if (qaLockCalendar == false) {
-              openCalendar();
-            }
-        }
-      });
+            case 'calendar':
+              if (qaLockCalendar == false) {
+                openCalendar();
+              }
+          }
+        });
+      }
     });
     return Stack(
       fit: StackFit.expand,
@@ -378,9 +375,9 @@ class _MyHomePageState extends State<MyHomePage> {
           future: getPrefsValue('beta', 'bool'),
           builder: (BuildContext context, AsyncSnapshot snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
-              if (snapshot.hasError) {
+              if (snapshot.hasError || snapshot.data == null) {
                 // 请求失败，显示错误
-                return switchUI(true);
+                return switchUI(false);
               } else {
                 // 请求成功，显示数据
                 return switchUI(snapshot.data);
@@ -733,6 +730,7 @@ class _MyHomePageState extends State<MyHomePage> {
       trailingAtBottom: true,
       scrollable: true,
       onDestinationSelected: handleDestinationSelected,
+      labelType: NavigationRailLabelType.all,
       destinations: const [
         NavigationRailDestination(label: Text('成绩查询'), icon: Icon(Icons.score)),
         NavigationRailDestination(
@@ -742,10 +740,6 @@ class _MyHomePageState extends State<MyHomePage> {
         NavigationRailDestination(
           label: Text('图书馆系统'),
           icon: Icon(Icons.local_library),
-        ),
-        NavigationRailDestination(
-          label: Text('研修间预约'),
-          icon: Icon(Icons.chair),
         ),
         NavigationRailDestination(label: Text('校园网'), icon: Icon(Icons.wifi)),
         NavigationRailDestination(
@@ -1054,7 +1048,7 @@ class _MyHomePageState extends State<MyHomePage> {
         agendaWebViewController = controller;
       },
       onLoadStop: (controller, url) async {
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        //final SharedPreferences prefs = await SharedPreferences.getInstance();
 
         // 删除元素
         /*if (prefs.getBool('beta') == true) {
@@ -1160,87 +1154,78 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget drawer() {
     return NavigationDrawer(
-      selectedIndex: 1145141919810,
+      selectedIndex: -1,
       onDestinationSelected: handleDestinationSelected,
       tilePadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 1.0),
-      children: <Widget>[
-        ListTile(
-          title: Text(
-            "极速农大",
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          subtitle: GestureDetector(
-            child: Text('版本 $version'),
-            onDoubleTap: () => showDialog(
-              context: context,
-              barrierDismissible: true,
-              builder: (context) {
-                return AlertDialog(
-                  title: const Text('你干嘛～哈哈～哎哟～'),
-                  actions: <Widget>[
-                    TextButton(
-                      child: const Text('原始人，起洞'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    TextButton(
-                      child: const Text('嗯，哼，哼，啊啊啊啊啊'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    TextButton(
-                      child: const Text('Man! What can I say?'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                );
-              },
-            ),
+      header: ListTile(
+        title: Text("极速农大", style: Theme.of(context).textTheme.headlineMedium),
+        subtitle: GestureDetector(
+          child: Text('版本 $version'),
+          onDoubleTap: () => showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('你干嘛～哈哈～哎哟～'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('原始人，起洞'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('嗯，哼，哼，啊啊啊啊啊'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Man! What can I say?'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              );
+            },
           ),
         ),
-        const NavigationDrawerDestination(
+      ),
+      children: const <Widget>[
+        NavigationDrawerDestination(
           label: Text('成绩查询'),
           icon: Icon(Icons.score),
         ),
-        const NavigationDrawerDestination(
+        NavigationDrawerDestination(
           label: Text('教务系统'),
           icon: Icon(Icons.class_),
         ),
-        const NavigationDrawerDestination(
+        NavigationDrawerDestination(
           label: Text('图书馆系统'),
           icon: Icon(Icons.local_library),
         ),
-        const NavigationDrawerDestination(
-          label: Text('研修间预约'),
-          icon: Icon(Icons.chair),
-        ),
-        const NavigationDrawerDestination(
-          label: Text('校园网'),
-          icon: Icon(Icons.wifi),
-        ),
-        const NavigationDrawerDestination(
+
+        NavigationDrawerDestination(label: Text('校园网'), icon: Icon(Icons.wifi)),
+        NavigationDrawerDestination(
           label: Text('WebVPN'),
           icon: Icon(Icons.vpn_key),
         ),
-        const NavigationDrawerDestination(
+        NavigationDrawerDestination(
           label: Text('校历'),
           icon: Icon(Icons.calendar_month),
         ),
-        const ListTile(title: Text('某科学的超哥发明')),
-        const NavigationDrawerDestination(
+        ListTile(title: Text('某科学的超哥发明')),
+        NavigationDrawerDestination(
           label: Text('校园全景'),
           icon: Icon(Icons.vrpano),
         ),
-        const NavigationDrawerDestination(
+        NavigationDrawerDestination(
           label: Text('学生社区'),
           icon: Icon(Icons.home_work),
         ),
 
-        const SizedBox(height: kFloatingActionButtonMargin),
+        SizedBox(height: kFloatingActionButtonMargin),
       ],
     );
   }
@@ -1275,16 +1260,14 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
         );
-      case 3:
-        openLibrarySeat();
 
-      case 4:
+      case 3:
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const CampusNetPage()),
         );
 
-      case 5:
+      case 4:
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1296,12 +1279,12 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         );
 
-      case 6:
+      case 5:
         openCalendar();
 
-      case 7:
+      case 6:
         launchInBrowser('https://www.720yun.com/vr/c50jzzeuea8');
-      case 8:
+      case 7:
         launchInBrowser('https://www.720yun.com/vr/075j5p4nOm1');
     }
   }
@@ -1334,25 +1317,6 @@ class _MyHomePageState extends State<MyHomePage> {
       if (qaLockScore == true) {
         setState(() {
           qaLockScore = false;
-        });
-      }
-    });
-  }
-
-  openLibrarySeat() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const WebViewPage(
-          title: '研修间预约',
-          address: 'http://libseat.byau.edu.cn/',
-          campusNetAddress: '',
-        ),
-      ),
-    ).then((val) {
-      if (qaLockSeat == true) {
-        setState(() {
-          qaLockSeat = false;
         });
       }
     });
@@ -1461,22 +1425,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 title: const Text('个性化'),
                 onTap: () => showScheduleSettings(),
               ),
-              ListTile(
-                leading: const Icon(Icons.event),
-                title: const Text('日程导入助手'),
-                subtitle: const Text('接入系统日历'),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const EventImportPage(),
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.upload),
-                title: const Text('导入WakeUp课程表'),
-                onTap: () => importWakeUp(context),
-              ),
+
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.cast_for_education),
@@ -1489,13 +1438,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     builder: (context) {
                       return AlertDialog(
                         title: const Text('学习通课程'),
-                        content: const Text('71572560'),
+                        content: const Text('46655370'),
                         actions: <Widget>[
                           TextButton(
                             child: const Text('复制邀请码'),
                             onPressed: () {
                               Clipboard.setData(
-                                const ClipboardData(text: '71572560'),
+                                const ClipboardData(text: '46655370'),
                               );
                             },
                           ),
@@ -1633,329 +1582,346 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     await showModalBottomSheet(
-      clipBehavior: Clip.antiAlias,
       barrierColor: Colors.transparent,
-      backgroundColor: Theme.of(
-        context,
-      ).scaffoldBackgroundColor.withValues(alpha: 0.9),
+      backgroundColor: Colors.transparent,
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState2) {
-          return ListView(
-            shrinkWrap: true,
-            children: [
-              AppBar(
-                title: const Text('个性化'),
-                backgroundColor: Colors.transparent,
-                actions: [
-                  IconButton(
-                    onPressed: () {
-                      refreshUI();
+      builder: (context) => SizedBox(
+        height: 350,
+        child: Card(
+          color: Theme.of(
+            context,
+          ).scaffoldBackgroundColor.withValues(alpha: 0.8),
+          margin: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(24)), // 设置圆角半径
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: StatefulBuilder(
+            builder: (context, setState2) {
+              return ListView(
+                shrinkWrap: true,
+                children: [
+                  AppBar(
+                    title: const Text('个性化'),
+                    backgroundColor: Colors.transparent,
+                    actions: [
+                      IconButton(
+                        onPressed: () {
+                          refreshUI();
+                        },
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
+                  SwitchListTile(
+                    value: prefs.getBool('beta')!,
+                    title: const Text('全新UI'),
+                    secondary: const Icon(Icons.color_lens),
+                    onChanged: (value) {
+                      prefs.setBool('beta', value);
+                      setState2(() {
+                        setState(() {});
+                      });
                     },
-                    icon: const Icon(Icons.refresh),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.person),
+                    title: const Text('昵称'),
+                    subtitle: Text(getNickname()),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (context) {
+                          final nicknameEdit = TextEditingController();
+                          nicknameEdit.text = prefs.getString('nickname')!;
+                          return AlertDialog(
+                            title: const Text('昵称'),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              child: ListView(
+                                shrinkWrap: true,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  TextField(
+                                    autofocus: true,
+                                    controller: nicknameEdit,
+                                    onSubmitted: (value) {
+                                      nicknameEdit.text = value;
+                                    },
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('取消'),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              TextButton(
+                                child: const Text('确定'),
+                                onPressed: () {
+                                  prefs.setString(
+                                    'nickname',
+                                    nicknameEdit.text,
+                                  );
+                                  setState2(() {});
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    title: const Text('卡片透明度'),
+                    subtitle: Slider(
+                      padding: EdgeInsets.zero,
+                      value: transparencyCard,
+                      min: 0.00,
+                      max: 1.00,
+                      divisions: 100,
+                      label: transparencyCard.toString(),
+                      onChanged: (value) {
+                        // 拖动改变进度
+                        setState2(() {
+                          transparencyCard = value;
+                        });
+                      },
+                      onChangeEnd: (value) {
+                        prefs.setDouble('transparency_card', value);
+                        cardRefresh1?.call();
+                        cardRefresh2?.call();
+                      },
+                    ),
+                  ),
+                  const Divider(),
+
+                  ListTile(
+                    leading: const Icon(Icons.wallpaper),
+                    title: const Text("自定义背景"),
+                    subtitle: const Text('支持GIF动图'),
+                    onTap: () async {
+                      final ImagePicker picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.gallery,
+                      );
+                      if (image?.length() != null) {
+                        imageCache.clear();
+                        Uint8List imageBytes = await image!.readAsBytes();
+                        bgFile.create();
+                        await bgFile.writeAsBytes(imageBytes);
+                        setState(() {});
+                      }
+                    },
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => showDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('删除自定义背景'),
+                            content: const Text('将恢复默认背景'),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('取消'),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                              TextButton(
+                                child: const Text('确定'),
+                                onPressed: () {
+                                  if (bgFile.existsSync()) {
+                                    imageCache.clear();
+                                    bgFile.delete();
+                                    setState(() {});
+                                  }
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  ListTile(
+                    title: const Text('背景透明度'),
+                    subtitle: Slider(
+                      padding: EdgeInsets.zero,
+                      value: transparency,
+                      min: 0.00,
+                      max: 1.00,
+                      divisions: 100,
+                      label: transparency.toString(),
+                      onChanged: (value) {
+                        // 拖动改变进度
+                        setState2(() {
+                          transparency = value;
+                        });
+                        layerRefresh?.call();
+                      },
+                      onChangeEnd: (value) {
+                        prefs.setDouble('transparency_background', value);
+                      },
+                    ),
+                  ),
+                  SwitchListTile(
+                    value: prefs.getBool('transparent')!,
+                    title: const Text('纯色背景'),
+                    subtitle: const Text('深色模式或自定义背景不可用'),
+                    onChanged: (value) {
+                      prefs.setBool('transparent', value);
+                      setState2(() {
+                        refreshUI();
+                      });
+                    },
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    value: prefs.getBool('divider')!,
+                    title: const Text('删除分隔线'),
+                    onChanged: (value) {
+                      prefs.setBool('divider', value);
+                      setState2(() {
+                        refreshUI();
+                      });
+                    },
+                  ),
+                  SwitchListTile(
+                    value: prefs.getBool('overview')!,
+                    secondary: const Icon(Icons.zoom_in_map),
+                    title: const Text('课表缩放'),
+                    onChanged: (value) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (context) {
+                          final zoomEdit = TextEditingController();
+                          if (prefs.getDouble('zoom') != null) {
+                            zoomEdit.text = '${prefs.getDouble('zoom')}';
+                          } else {
+                            if (Platform.isIOS) {
+                              zoomEdit.text = '1';
+                            } else {
+                              zoomEdit.text = '100';
+                            }
+                          }
+                          return AlertDialog(
+                            title: const Text('课表缩放'),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              child: ListView(
+                                shrinkWrap: true,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  TextField(
+                                    autofocus: true,
+                                    controller: zoomEdit,
+                                    onSubmitted: (value) {
+                                      zoomEdit.text = value;
+                                    },
+                                    decoration: const InputDecoration(
+                                      labelText: "放大数值",
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('关闭缩放'),
+                                onPressed: () {
+                                  prefs.setBool('overview', false);
+                                  prefs.remove('zoom');
+                                  setState2(() {});
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              TextButton(
+                                child: const Text('取消'),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              TextButton(
+                                child: const Text('确定'),
+                                onPressed: () {
+                                  prefs.setBool('overview', true);
+                                  double? number = double.tryParse(
+                                    zoomEdit.text,
+                                  );
+                                  if (number == null) {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: true,
+                                      builder: (context) {
+                                        final zoomEdit =
+                                            TextEditingController();
+                                        if (prefs.getDouble('zoom') != null) {
+                                          zoomEdit.text =
+                                              '${prefs.getDouble('zoom')}';
+                                        } else {
+                                          zoomEdit.text = '1';
+                                        }
+                                        return AlertDialog(
+                                          content: const Text('请输入有效数字'),
+                                          actions: <Widget>[
+                                            TextButton(
+                                              child: const Text('确定'),
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  } else {
+                                    prefs.setDouble('zoom', number);
+                                  }
+
+                                  setState2(() {});
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const Divider(),
+
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: const Text('自定义课程'),
+                    subtitle: const Text('添加值班/实验/重修/补修等未显示课程'),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            CustomCoursePage(document: document),
+                      ),
+                    ).then((val) => refreshUI()),
                   ),
                 ],
-              ),
-              SwitchListTile(
-                value: prefs.getBool('beta')!,
-                title: const Text('全新UI'),
-                secondary: const Icon(Icons.color_lens),
-                onChanged: (value) {
-                  prefs.setBool('beta', value);
-                  setState2(() {
-                    setState(() {});
-                  });
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.person),
-                title: const Text('昵称'),
-                subtitle: Text(getNickname()),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) {
-                      final nicknameEdit = TextEditingController();
-                      nicknameEdit.text = prefs.getString('nickname')!;
-                      return AlertDialog(
-                        title: const Text('昵称'),
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: [
-                              const SizedBox(height: 4),
-                              TextField(
-                                autofocus: true,
-                                controller: nicknameEdit,
-                                onSubmitted: (value) {
-                                  nicknameEdit.text = value;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('取消'),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                          TextButton(
-                            child: const Text('确定'),
-                            onPressed: () {
-                              prefs.setString('nickname', nicknameEdit.text);
-                              setState2(() {});
-                              setState(() {});
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-
-              ListTile(
-                title: const Text('卡片透明度'),
-                subtitle: Slider(
-                  padding: EdgeInsets.zero,
-                  value: transparencyCard,
-                  min: 0.00,
-                  max: 1.00,
-                  divisions: 100,
-                  label: transparencyCard.toString(),
-                  onChanged: (value) {
-                    // 拖动改变进度
-                    setState2(() {
-                      transparencyCard = value;
-                    });
-                  },
-                  onChangeEnd: (value) {
-                    prefs.setDouble('transparency_card', value);
-                    cardRefresh1?.call();
-                    cardRefresh2?.call();
-                  },
-                ),
-              ),
-              const Divider(),
-
-              ListTile(
-                leading: const Icon(Icons.wallpaper),
-                title: const Text("自定义背景"),
-                subtitle: const Text('支持GIF动图'),
-                onTap: () async {
-                  final ImagePicker picker = ImagePicker();
-                  final XFile? image = await picker.pickImage(
-                    source: ImageSource.gallery,
-                  );
-                  if (image?.length() != null) {
-                    imageCache.clear();
-                    Uint8List imageBytes = await image!.readAsBytes();
-                    bgFile.create();
-                    await bgFile.writeAsBytes(imageBytes);
-                    setState(() {});
-                  }
-                },
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text('删除自定义背景'),
-                        content: const Text('将恢复默认背景'),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('取消'),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          TextButton(
-                            child: const Text('确定'),
-                            onPressed: () {
-                              if (bgFile.existsSync()) {
-                                imageCache.clear();
-                                bgFile.delete();
-                                setState(() {});
-                              }
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-              ListTile(
-                title: const Text('背景透明度'),
-                subtitle: Slider(
-                  padding: EdgeInsets.zero,
-                  value: transparency,
-                  min: 0.00,
-                  max: 1.00,
-                  divisions: 100,
-                  label: transparency.toString(),
-                  onChanged: (value) {
-                    // 拖动改变进度
-                    setState2(() {
-                      transparency = value;
-                    });
-                    layerRefresh?.call();
-                  },
-                  onChangeEnd: (value) {
-                    prefs.setDouble('transparency_background', value);
-                  },
-                ),
-              ),
-              SwitchListTile(
-                value: prefs.getBool('transparent')!,
-                title: const Text('纯色背景'),
-                subtitle: const Text('深色模式或自定义背景不可用'),
-                onChanged: (value) {
-                  prefs.setBool('transparent', value);
-                  setState2(() {
-                    refreshUI();
-                  });
-                },
-              ),
-              const Divider(),
-              SwitchListTile(
-                value: prefs.getBool('divider')!,
-                title: const Text('删除分隔线'),
-                onChanged: (value) {
-                  prefs.setBool('divider', value);
-                  setState2(() {
-                    refreshUI();
-                  });
-                },
-              ),
-              SwitchListTile(
-                value: prefs.getBool('overview')!,
-                secondary: const Icon(Icons.zoom_in_map),
-                title: const Text('课表缩放'),
-                onChanged: (value) {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) {
-                      final zoomEdit = TextEditingController();
-                      if (prefs.getDouble('zoom') != null) {
-                        zoomEdit.text = '${prefs.getDouble('zoom')}';
-                      } else {
-                        if (Platform.isIOS) {
-                          zoomEdit.text = '1';
-                        } else {
-                          zoomEdit.text = '100';
-                        }
-                      }
-                      return AlertDialog(
-                        title: const Text('课表缩放'),
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: [
-                              const SizedBox(height: 4),
-                              TextField(
-                                autofocus: true,
-                                controller: zoomEdit,
-                                onSubmitted: (value) {
-                                  zoomEdit.text = value;
-                                },
-                                decoration: const InputDecoration(
-                                  labelText: "放大数值",
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('关闭缩放'),
-                            onPressed: () {
-                              prefs.setBool('overview', false);
-                              prefs.remove('zoom');
-                              setState2(() {});
-                              setState(() {});
-                              Navigator.pop(context);
-                            },
-                          ),
-                          TextButton(
-                            child: const Text('取消'),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                          TextButton(
-                            child: const Text('确定'),
-                            onPressed: () {
-                              prefs.setBool('overview', true);
-                              double? number = double.tryParse(zoomEdit.text);
-                              if (number == null) {
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: true,
-                                  builder: (context) {
-                                    final zoomEdit = TextEditingController();
-                                    if (prefs.getDouble('zoom') != null) {
-                                      zoomEdit.text =
-                                          '${prefs.getDouble('zoom')}';
-                                    } else {
-                                      zoomEdit.text = '1';
-                                    }
-                                    return AlertDialog(
-                                      content: const Text('请输入有效数字'),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          child: const Text('确定'),
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              } else {
-                                prefs.setDouble('zoom', number);
-                              }
-
-                              setState2(() {});
-                              setState(() {});
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-              const Divider(),
-
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: const Text('自定义课程'),
-                subtitle: const Text('添加值班/实验/重修/补修等未显示课程'),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CustomCoursePage(document: document),
-                  ),
-                ).then((val) => refreshUI()),
-              ),
-            ],
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
     openSettings();

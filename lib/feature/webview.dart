@@ -37,7 +37,7 @@ class _WebViewPageState extends State<WebViewPage> {
     }
   }
 
-  bool webVPN = true;
+  bool campusNet = false;
 
   double progress = 0;
   String initialUrl = '';
@@ -160,16 +160,13 @@ class _WebViewPageState extends State<WebViewPage> {
                               url.path.contains('inquireScore'))) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            action: SnackBarAction(
-                              label: '确定',
-                              onPressed: () {},
-                            ),
+                            showCloseIcon: true,
                             content: const Text('此为八一农大APP的成绩查询页面，数据更新比教务系统慢。'),
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24.0),
                             ),
-                            duration: const Duration(seconds: 4),
+                            duration: const Duration(seconds: 3),
                           ),
                         );
                       }
@@ -269,19 +266,16 @@ class _WebViewPageState extends State<WebViewPage> {
       return StatefulBuilder(
         builder: (context, setState2) {
           return SwitchListTile(
-            title: Text(
-              'WebVPN',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            value: webVPN,
+            title: Text('校园网访问', style: Theme.of(context).textTheme.titleSmall),
+            value: campusNet,
             onChanged: (bool value) {
               setState2(() {
-                webVPN = value;
+                campusNet = value;
               });
               webViewController?.loadUrl(
                 urlRequest: URLRequest(
                   url: WebUri(
-                    webVPN ? widget.address : widget.campusNetAddress,
+                    campusNet ? widget.campusNetAddress : widget.address,
                   ),
                 ),
               );
@@ -308,9 +302,9 @@ class _WebViewPageState extends State<WebViewPage> {
             return InAppWebView(
               initialUrlRequest: URLRequest(
                 url: WebUri(
-                  webVPN
-                      ? 'https://http-10-1-4-41-80.webvpn.byau.edu.cn/jsxsd/kscj/cjbjg_list'
-                      : 'http://10.1.4.41/jsxsd/kscj/cjbjg_list',
+                  campusNet
+                      ? 'http://10.1.4.41/jsxsd/kscj/cjbjg_list'
+                      : 'https://http-10-1-4-41-80.webvpn.byau.edu.cn/jsxsd/kscj/cjbjg_list',
                 ),
               ),
               initialSettings: InAppWebViewSettings(
