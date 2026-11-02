@@ -61,14 +61,17 @@ class _MyHomePageState extends State<MyHomePage> {
   InAppWebViewController? courseWebViewController;
   InAppWebViewController? agendaWebViewController;
   InAppWebViewController? codeWebViewController;
+  CookieManager cookieManager = CookieManager.instance();
 
   @override
   void initState() {
+    cookieManager.deleteAllCookies(); // 清除Cookies
+
     initApp();
     super.initState();
   }
 
-  String version = '2.9.0';
+  String version = '2.9.1';
   String firstrunVer = '2.9.0';
 
   bool qaLockCode = false;
@@ -446,6 +449,15 @@ class _MyHomePageState extends State<MyHomePage> {
               backgroundColor: Colors.transparent,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: '刷新',
+                  onPressed: () => refreshUI(),
+                  onLongPress: () {
+                    cookieManager.deleteAllCookies();
+                    refreshUI();
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.settings),
                   tooltip: '设置',
                   onPressed: () => openSettings(),
@@ -665,6 +677,15 @@ class _MyHomePageState extends State<MyHomePage> {
               backgroundColor: Colors.transparent,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: '刷新',
+                  onPressed: () => refreshUI(),
+                  onLongPress: () {
+                    cookieManager.deleteAllCookies();
+                    refreshUI();
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.settings),
                   tooltip: '设置',
                   onPressed: () => openSettings(),
@@ -731,6 +752,15 @@ class _MyHomePageState extends State<MyHomePage> {
       scrollable: true,
       onDestinationSelected: handleDestinationSelected,
       labelType: NavigationRailLabelType.all,
+      leading: IconButton(
+        icon: const Icon(Icons.refresh),
+        tooltip: '刷新',
+        onPressed: () => refreshUI(),
+        onLongPress: () {
+          cookieManager.deleteAllCookies();
+          refreshUI();
+        },
+      ),
       destinations: const [
         NavigationRailDestination(label: Text('成绩查询'), icon: Icon(Icons.score)),
         NavigationRailDestination(
@@ -1357,16 +1387,7 @@ class _MyHomePageState extends State<MyHomePage> {
           return ListView(
             shrinkWrap: true,
             children: [
-              AppBar(
-                backgroundColor: Colors.transparent,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    tooltip: '刷新',
-                    onPressed: () => refreshUI(),
-                  ),
-                ],
-              ),
+              AppBar(backgroundColor: Colors.transparent, title: Text('设置')),
               ListTile(
                 contentPadding: const EdgeInsets.only(left: 16, right: 8),
                 leading: const Icon(Icons.account_circle),
@@ -1590,7 +1611,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Card(
           color: Theme.of(
             context,
-          ).scaffoldBackgroundColor.withValues(alpha: 0.8),
+          ).scaffoldBackgroundColor.withValues(alpha: 0.9),
           margin: EdgeInsets.only(left: 16, right: 16, bottom: 16),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(24)), // 设置圆角半径
@@ -1604,14 +1625,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   AppBar(
                     title: const Text('个性化'),
                     backgroundColor: Colors.transparent,
-                    actions: [
-                      IconButton(
-                        onPressed: () {
-                          refreshUI();
-                        },
-                        icon: const Icon(Icons.refresh),
-                      ),
-                    ],
                   ),
                   SwitchListTile(
                     value: prefs.getBool('beta')!,
