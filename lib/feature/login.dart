@@ -26,41 +26,42 @@ showAutoLoginDialog(BuildContext context) async {
     builder: (context) {
       return AlertDialog(
         title: const Text("自动登录"),
-        content: SizedBox(
-          width: 250,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              const SizedBox(height: 8),
-              TextField(
-                autofocus: true,
-                controller: usernameEdit,
-                onSubmitted: (value) {
-                  usernameEdit.text = value;
-                },
-                onEditingComplete: () => FocusScope.of(context).nextFocus(),
-                decoration: const InputDecoration(
-                  labelText: "学号",
-                  border: OutlineInputBorder(),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 300),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                TextField(
+                  autofocus: true,
+                  controller: usernameEdit,
+                  onSubmitted: (value) {
+                    usernameEdit.text = value;
+                  },
+                  onEditingComplete: () => FocusScope.of(context).nextFocus(),
+                  decoration: const InputDecoration(
+                    labelText: "学号",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                autofocus: true,
-                controller: passwordEdit,
-                onSubmitted: (value) {
-                  passwordEdit.text = value;
-                },
-                onEditingComplete: () => FocusScope.of(context).unfocus(),
-                minLines: 1,
-                maxLines: 1,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "密码",
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  autofocus: true,
+                  controller: passwordEdit,
+                  onSubmitted: (value) {
+                    passwordEdit.text = value;
+                  },
+                  onEditingComplete: () => FocusScope.of(context).unfocus(),
+                  minLines: 1,
+                  maxLines: 1,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "密码",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         actions: <Widget>[
@@ -142,8 +143,8 @@ showLoginWindow(BuildContext context, String username, String password) async {
   showDialog(
     builder: (context) {
       return AlertDialog(
-        content: SizedBox(
-          width: 250,
+        content: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 500, maxHeight: 500),
           child: InAppWebView(
             initialUrlRequest: URLRequest(
               url: WebUri(

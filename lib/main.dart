@@ -71,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
   }
 
-  String version = '2.9.1';
+  String version = '2.9.2';
   String firstrunVer = '2.9.0';
 
   bool qaLockCode = false;
@@ -137,10 +137,31 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void openMarkdownAsset(BuildContext context, String markdown) {
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: MarkdownBody(data: markdown, selectable: false),
+            ),
+            SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
   showFirstRunDialog() async {
     if (Platform.isAndroid || Platform.isIOS) {
       const QuickActions().clearShortcutItems;
     }
+
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -162,32 +183,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     leading: const Icon(Icons.file_present),
                     title: const Text('使用协议'),
                     onTap: () async {
-                      String privacy = await rootBundle.loadString(
+                      String terms = await rootBundle.loadString(
                         'assets/terms_of_use.md',
                       );
-                      showDialog(
-                        context: context,
-                        barrierDismissible: true,
-                        builder: (context) {
-                          return AlertDialog(
-                            content: SizedBox(
-                              width: double.maxFinite,
-                              child: ListView(
-                                shrinkWrap: true,
-                                children: [MarkdownBody(data: privacy)],
-                              ),
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('确定'),
-                                onPressed: () async {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      );
+                      openMarkdownAsset(context, terms);
                     },
                   ),
                   ListTile(
@@ -197,29 +196,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       String privacy = await rootBundle.loadString(
                         'assets/privacy_policy.md',
                       );
-                      showDialog(
-                        context: context,
-                        barrierDismissible: true,
-                        builder: (context) {
-                          return AlertDialog(
-                            content: SizedBox(
-                              width: double.maxFinite,
-                              child: ListView(
-                                shrinkWrap: true,
-                                children: [MarkdownBody(data: privacy)],
-                              ),
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('确定'),
-                                onPressed: () async {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      );
+                      openMarkdownAsset(context, privacy);
                     },
                   ),
                 ],
@@ -1495,32 +1472,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 leading: const Icon(Icons.file_present),
                 title: const Text('使用协议'),
                 onTap: () async {
-                  String privacy = await rootBundle.loadString(
+                  String terms = await rootBundle.loadString(
                     'assets/terms_of_use.md',
                   );
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) {
-                      return AlertDialog(
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: [MarkdownBody(data: privacy)],
-                          ),
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('确定'),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                  openMarkdownAsset(context, terms);
                 },
               ),
               ListTile(
@@ -1530,29 +1485,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   String privacy = await rootBundle.loadString(
                     'assets/privacy_policy.md',
                   );
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) {
-                      return AlertDialog(
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: [MarkdownBody(data: privacy)],
-                          ),
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('确定'),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                  openMarkdownAsset(context, privacy);
                 },
               ),
               ListTile(

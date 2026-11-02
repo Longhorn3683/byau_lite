@@ -1,27 +1,12 @@
 {
   "app": {
-    "signingConfigs": [
-      {
-        "name": "default",
-        "type": "HarmonyOS",
-        "material": {
-          "storeFile": "/Users/longhorn3683/Projects/signature/鸿蒙签名.p12",
-          "storePassword": "0000001A21BB9BBA34801C988E62E12311F28ED276267B1AED600E114DBDF86A9ECBFB9C9FEF4C345C19",
-          "keyAlias": "longhorn3683",
-          "keyPassword": "0000001A077351C19D99B462C0B443056959FA711DD068A7912462010596E7E097880F7EA677E375B4A4",
-          "signAlg": "SHA256withECDSA",
-          "profile": "/Users/longhorn3683/Projects/signature/hmos_profile/极速农大鸿蒙.p7b",
-          "certpath": "/Users/longhorn3683/Projects/signature/鸿蒙发布证书.cer"
-        }
-      }
-    ],
     "products": [
       {
         "name": "default",
         "signingConfig": "default",
-        "compatibleSdkVersion": "5.0.0(12)",
+        "compatibleSdkVersion": "5.0.5(17)",
         "runtimeOS": "HarmonyOS",
-        "targetSdkVersion": "6.0.0(20)"
+        "targetSdkVersion": "26.0.0"
       }
     ],
     "buildModeSet": [

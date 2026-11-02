@@ -155,21 +155,6 @@ class _WebViewPageState extends State<WebViewPage> {
                       setState(() {
                         initialUrl = url.toString();
                       });
-                      if (widget.title == '成绩查询' &&
-                          (url!.path.contains('/cas/login') ||
-                              url.path.contains('inquireScore'))) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            showCloseIcon: true,
-                            content: const Text('此为八一农大APP的成绩查询页面，数据更新比教务系统慢。'),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24.0),
-                            ),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
                     },
                     onProgressChanged: (controller, progress) {
                       if (progress == 100) {}

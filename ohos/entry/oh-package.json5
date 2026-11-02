@@ -10,6 +10,7 @@
     "shared_preferences_ohos": "file:../har/shared_preferences_ohos.har",
     "url_launcher_ohos": "file:../har/url_launcher_ohos.har",
     "image_picker_ohos": "file:../har/image_picker_ohos.har",
-    "path_provider_ohos": "file:../har/path_provider_ohos.har"
+    "path_provider_ohos": "file:../har/path_provider_ohos.har",
+    "@ohos/flutter_ohos": "har/flutter.har"
   }
 }
